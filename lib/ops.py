@@ -4,7 +4,7 @@ for simple ops and layers.
 Some of the code doesn't belong to me and is gathered from
 different sources. (Ask me if the source is not indicated)
 """
-
+x
 import os, sys
 sys.path.append(os.getcwd())
 sys.path.insert(1, '../')
@@ -58,6 +58,7 @@ def Linear(
     terms = []
     params = []
 
+    # Initialises weight values/ model parameters.
     for i, (inp, inp_dim) in enumerate(zip(inputs, input_dims)):
         if isinstance(initialization, numpy.ndarray):
             weight_values = initialization
@@ -94,9 +95,9 @@ def Linear(
             name + '.W'+str(i),
             weight_values
         )
-        params.append(weight)
+        params.append(weight) # Add initalised weight to list of entire network. 'params' is a list of all the parameters in the NN.
 
-        if weightnorm:
+        if weightnorm: # Is done by default. Weights are processed/normalised.
             norm_values = numpy.linalg.norm(weight_values, axis=0)
             norms = lib.param(
                 name + '.g'+str(i),
@@ -108,7 +109,7 @@ def Linear(
             prepared_weight = normed_weight
         else:
             prepared_weight = weight
-        terms.append(T.dot(inp, prepared_weight))
+        terms.append(T.dot(inp, prepared_weight)) # Dot product. Ax
 
     if biases:
         layer_biases = lib.param(
@@ -121,7 +122,7 @@ def Linear(
     if just_params:
         return params
     # otherwise, comlete/add to the computation graph
-    out = reduce(lambda a,b: a+b, terms)
+    out = reduce(lambda a,b: a+b, terms) # add bias
     out.name = name + '.output'
     return out
 

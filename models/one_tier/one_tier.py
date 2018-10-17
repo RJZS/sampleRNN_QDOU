@@ -226,6 +226,7 @@ def load_data(data_feeder):
                        Q_TYPE)
 
 ### Creating computation graph ###
+# Just defining the model currently.
 def sample_level_rnn(input_sequences, h0, reset):
     """
     input_sequences.shape: (batch size, seq len)
@@ -383,6 +384,7 @@ grads = [T.clip(g, lib.floatX(-GRAD_CLIP), lib.floatX(GRAD_CLIP)) for g in grads
 updates = lasagne.updates.adam(grads, params, learning_rate=LEARNING_RATE)
 
 # Training function
+# calls sample_level_rnn and actually does the computation
 train_fn = theano.function(
     [sequences, h0, reset, mask],
     [cost, new_h0],

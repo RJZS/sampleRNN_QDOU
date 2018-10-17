@@ -240,6 +240,7 @@ def load_data_gen(data_feeder,SEQ_LEN_gen):
                        Q_TYPE)
 print('----got to def---')
 ### Creating computation graph ###
+# Remove input_sequences. Keep input_sequences_lab_big as this is the conditioning vector (lab = labels)
 def big_frame_level_rnn(input_sequences, input_sequences_lab_big, h0, reset):
     """
     input_sequences.shape: (batch size, n big frames * BIG_FRAME_SIZE)
@@ -327,6 +328,7 @@ def big_frame_level_rnn(input_sequences, input_sequences_lab_big, h0, reset):
 
     return (output, last_hidden, independent_preds)
 
+# Want to remove input_sequences from this and all other layers. Conditioning on past samples.
 def frame_level_rnn(input_sequences, input_sequences_lab, other_input, h0, reset):
     """
     input_sequences.shape: (batch size, n frames * FRAME_SIZE)
@@ -345,7 +347,7 @@ def frame_level_rnn(input_sequences, input_sequences_lab, other_input, h0, reset
     # (a reasonable range to pass as inputs to the RNN)
     frames = (frames.astype('float32') / lib.floatX(Q_LEVELS/2)) - lib.floatX(1)
     frames *= lib.floatX(2)
-    
+
     if FLAG_QUANTLAB:
         frames = T.concatenate([frames, input_sequences_lab], axis=2)
 
@@ -353,16 +355,18 @@ def frame_level_rnn(input_sequences, input_sequences_lab, other_input, h0, reset
         # (a reasonable range to pass as inputs to the RNN)
         frames = (frames.astype('float32') / lib.floatX(Q_LEVELS/2)) - lib.floatX(1)
         frames *= lib.floatX(2)
-        
+
     else:
         input_sequences_lab *= lib.floatX(2) # 0< data <2
         input_sequences_lab -= lib.floatX(1) # -1< data <1
         input_sequences_lab *= lib.floatX(2) # -2< data <2
-        
+
         frames = (frames.astype('float32') / lib.floatX(Q_LEVELS/2)) - lib.floatX(1)
         frames *= lib.floatX(2)
-        
+
+        # Concatenating samples with conditioning vectors. just set frames = input_sequences_lab.
         frames = T.concatenate([frames, input_sequences_lab], axis=2)
+        # Try this: frames = input_sequences_lab
 
     gru_input = lib.ops.Linear(
         'FrameLevel.InputExpand',
@@ -388,6 +392,7 @@ def frame_level_rnn(input_sequences, input_sequences_lab, other_input, h0, reset
     # Handling RNN_TYPE
     # Handling SKIP_CONN
     if RNN_TYPE == 'GRU':
+        # N_RNN is number of layers.
         rnns_out, last_hidden = lib.ops.stackedGRU('FrameLevel.GRU',
                                                    N_RNN,
                                                    DIM,
@@ -418,6 +423,9 @@ def frame_level_rnn(input_sequences, input_sequences_lab, other_input, h0, reset
 
     return (output, last_hidden)
 
+# the DNNs!! Taking the outputs from the RNN (frame_level_outputs)
+# prev_samples is a bunch of samples from previous timesteps (FRAME_SIZE timesteps).
+# Want to remove this as an input so not conditioning on previous steps anymore!
 def sample_level_predictor(frame_level_outputs, prev_samples):
     """
     frame_level_outputs.shape: (batch size, DIM) -> (BATCH_SIZE * SEQ_LEN, DIM)
@@ -442,17 +450,18 @@ def sample_level_predictor(frame_level_outputs, prev_samples):
 
     prev_samples = prev_samples.reshape((-1, FRAME_SIZE_DNN * last_out_shape))
 
-    out = lib.ops.Linear(
-        'SampleLevel.L1_PrevSamples',
-        FRAME_SIZE_DNN * last_out_shape,
-        DIM,
-        prev_samples,
-        biases=False,
-        initialization='he',
-        weightnorm=WEIGHT_NORM
-    )
+    # out = lib.ops.Linear(
+    #     'SampleLevel.L1_PrevSamples',
+    #     FRAME_SIZE_DNN * last_out_shape,
+    #     DIM,
+    #     prev_samples,
+    #     biases=False,
+    #     initialization='he',
+    #     weightnorm=WEIGHT_NORM
+    # )
 
     out += frame_level_outputs
+    # change to out = frame_level_outputs, as frame_level_outputs is from tier2.
     # out = T.nnet.relu(out)  # commented out to be similar to two_tier
 
     out = lib.ops.Linear('SampleLevel.L2',
@@ -482,6 +491,7 @@ def sample_level_predictor(frame_level_outputs, prev_samples):
     return out
 
 print('----got to T var---')
+# After defined graph, need to define theano variables!
 sequences   = T.imatrix('sequences')
 h0          = T.tensor3('h0')
 big_h0      = T.tensor3('big_h0')
@@ -516,6 +526,7 @@ target_mask = mask[:, BIG_FRAME_SIZE:]
 #---debug---
 #pdb.set_trace()
 #---debug---
+# Defines relationship between the variables. This isn't computed yet!
 big_frame_level_outputs, new_big_h0, big_frame_independent_preds = big_frame_level_rnn(big_input_sequences, sequences_lab_big, big_h0, reset)
 
 frame_level_outputs, new_h0 = frame_level_rnn(input_sequences, sequences_lab, big_frame_level_outputs, h0, reset)
