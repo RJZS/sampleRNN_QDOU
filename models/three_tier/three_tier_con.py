@@ -450,15 +450,16 @@ def sample_level_predictor(frame_level_outputs, prev_samples):
 
     prev_samples = prev_samples.reshape((-1, FRAME_SIZE_DNN * last_out_shape))
 
-    # out = lib.ops.Linear(
-    #     'SampleLevel.L1_PrevSamples',
-    #     FRAME_SIZE_DNN * last_out_shape,
-    #     DIM,
-    #     prev_samples,
-    #     biases=False,
-    #     initialization='he',
-    #     weightnorm=WEIGHT_NORM
-    # )
+    # comment out this block
+    out = lib.ops.Linear(
+        'SampleLevel.L1_PrevSamples',
+        FRAME_SIZE_DNN * last_out_shape,
+        DIM,
+        prev_samples,
+        biases=False,
+        initialization='he',
+        weightnorm=WEIGHT_NORM
+    )
 
     out += frame_level_outputs
     # change to out = frame_level_outputs, as frame_level_outputs is from tier2.
