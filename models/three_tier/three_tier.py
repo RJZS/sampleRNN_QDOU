@@ -39,6 +39,7 @@ random.seed(123)
 
 import theano
 import theano.tensor as T
+import theano.tensor.nnet.neighbours
 import theano.ifelse
 import lasagne
 import scipy.io.wavfile
@@ -444,7 +445,7 @@ frame_level_outputs, new_h0 = frame_level_rnn(input_sequences, big_frame_level_o
 
 prev_samples = sequences[:, BIG_FRAME_SIZE-FRAME_SIZE_DNN:-1]
 prev_samples = prev_samples.reshape((1, BATCH_SIZE, 1, -1))
-prev_samples = T.nnet.neighbours.images2neibs(prev_samples, (1, FRAME_SIZE_DNN), neib_step=(1, 1), mode='valid')
+prev_samples = theano.tensor.nnet.neighbours.images2neibs(prev_samples, (1, FRAME_SIZE_DNN), neib_step=(1, 1), mode='valid')
 prev_samples = prev_samples.reshape((BATCH_SIZE * SEQ_LEN, FRAME_SIZE_DNN))
 
 sample_level_outputs = sample_level_predictor(
