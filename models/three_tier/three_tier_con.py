@@ -744,6 +744,8 @@ def generate_and_save_samples(tag):
     big_frame_level_outputs = None
     frame_level_outputs = None
 
+    condition_noise = numpy.random.normal(size=(N_SEQS, LENGTH))
+
     for t in xrange(BIG_FRAME_SIZE, LENGTH):
 
         if t % BIG_FRAME_SIZE == 0:
@@ -751,7 +753,7 @@ def generate_and_save_samples(tag):
             tmp = tmp.reshape(tmp.shape[0],1,tmp.shape[1])
             
             big_frame_level_outputs, big_h0 = big_frame_level_generate_fn(
-                samples[:, t-BIG_FRAME_SIZE:t],
+                condition_noise[:, t-BIG_FRAME_SIZE:t],
                 tmp,
                 big_h0,
                 numpy.int32(t == BIG_FRAME_SIZE)
@@ -763,7 +765,7 @@ def generate_and_save_samples(tag):
             tmp = tmp.reshape(tmp.shape[0],1,tmp.shape[1])
             
             frame_level_outputs, h0 = frame_level_generate_fn(
-                samples[:, t-FRAME_SIZE:t],
+                condition_noise[:, t-FRAME_SIZE:t],
                 tmp,
                 big_frame_level_outputs[:, (t / FRAME_SIZE) % (BIG_FRAME_SIZE / FRAME_SIZE)],
                 h0,
@@ -772,7 +774,7 @@ def generate_and_save_samples(tag):
 
         samples[:, t] = sample_level_generate_fn(
             frame_level_outputs[:, t % FRAME_SIZE],
-            samples[:, t-FRAME_SIZE_DNN:t]
+            condition_noise[:, t-FRAME_SIZE_DNN:t]
         )
 
     total_time = time() - total_time
