@@ -260,15 +260,15 @@ def big_frame_level_rnn(input_sequences, input_sequences_lab_big, h0, reset):
         frames = T.concatenate([frames, input_sequences_lab_big], axis=2)
         # Rescale frames from ints in [0, Q_LEVELS) to floats in [-2, 2]
         # (a reasonable range to pass as inputs to the RNN)
-        frames = (frames.astype('float32') / lib.floatX(Q_LEVELS/2)) - lib.floatX(1)
-        frames *= lib.floatX(2)
+        # frames = (frames.astype('float32') / lib.floatX(Q_LEVELS/2)) - lib.floatX(1)
+        # frames *= lib.floatX(2)
     else:
         input_sequences_lab_big *= lib.floatX(2) # 0< data <2
         input_sequences_lab_big -= lib.floatX(1) # -1< data <1
         input_sequences_lab_big *= lib.floatX(2) # -2< data <2
         
-        frames = (frames.astype('float32') / lib.floatX(Q_LEVELS/2)) - lib.floatX(1)
-        frames *= lib.floatX(2)
+        # frames = (frames.astype('float32') / lib.floatX(Q_LEVELS/2)) - lib.floatX(1)
+        # frames *= lib.floatX(2)
         frames = T.concatenate([frames, input_sequences_lab_big], axis=2)
 
     # Initial state of RNNs
@@ -345,24 +345,24 @@ def frame_level_rnn(input_sequences, input_sequences_lab, other_input, h0, reset
 
     # Rescale frames from ints in [0, Q_LEVELS) to floats in [-2, 2]
     # (a reasonable range to pass as inputs to the RNN)
-    frames = (frames.astype('float32') / lib.floatX(Q_LEVELS/2)) - lib.floatX(1)
-    frames *= lib.floatX(2)
+    # frames = (frames.astype('float32') / lib.floatX(Q_LEVELS/2)) - lib.floatX(1)
+    # frames *= lib.floatX(2)
 
     if FLAG_QUANTLAB:
         frames = T.concatenate([frames, input_sequences_lab], axis=2)
 
         # Rescale frames from ints in [0, Q_LEVELS) to floats in [-2, 2]
         # (a reasonable range to pass as inputs to the RNN)
-        frames = (frames.astype('float32') / lib.floatX(Q_LEVELS/2)) - lib.floatX(1)
-        frames *= lib.floatX(2)
+        # frames = (frames.astype('float32') / lib.floatX(Q_LEVELS/2)) - lib.floatX(1)
+        # frames *= lib.floatX(2)
 
     else:
         input_sequences_lab *= lib.floatX(2) # 0< data <2
         input_sequences_lab -= lib.floatX(1) # -1< data <1
         input_sequences_lab *= lib.floatX(2) # -2< data <2
 
-        frames = (frames.astype('float32') / lib.floatX(Q_LEVELS/2)) - lib.floatX(1)
-        frames *= lib.floatX(2)
+        # frames = (frames.astype('float32') / lib.floatX(Q_LEVELS/2)) - lib.floatX(1)
+        # frames *= lib.floatX(2)
 
         # Concatenating samples with conditioning vectors. just set frames = input_sequences_lab.
         frames = T.concatenate([frames, input_sequences_lab], axis=2)
@@ -433,20 +433,20 @@ def sample_level_predictor(frame_level_outputs, prev_samples):
     output.shape:              (batch size, Q_LEVELS)
     """
     # Handling EMB_SIZE
-    if EMB_SIZE == 0:  # no support for one-hot in three_tier and one_tier.
-        prev_samples = lib.ops.T_one_hot(prev_samples, Q_LEVELS)
-        # (BATCH_SIZE*N_FRAMES*FRAME_SIZE, FRAME_SIZE_DNN, Q_LEVELS)
-        last_out_shape = Q_LEVELS
-    elif EMB_SIZE > 0:
-        prev_samples = lib.ops.Embedding(
-            'SampleLevel.Embedding',
-            Q_LEVELS,
-            EMB_SIZE,
-            prev_samples)
-        # (BATCH_SIZE*N_FRAMES*FRAME_SIZE, FRAME_SIZE_DNN, EMB_SIZE), f32
-        last_out_shape = EMB_SIZE
-    else:
-        raise ValueError('EMB_SIZE cannot be negative.')
+    # if EMB_SIZE == 0:  # no support for one-hot in three_tier and one_tier.
+    #     prev_samples = lib.ops.T_one_hot(prev_samples, Q_LEVELS)
+    #     # (BATCH_SIZE*N_FRAMES*FRAME_SIZE, FRAME_SIZE_DNN, Q_LEVELS)
+    #     last_out_shape = Q_LEVELS
+    # elif EMB_SIZE > 0:
+    #     prev_samples = lib.ops.Embedding(
+    #         'SampleLevel.Embedding',
+    #         Q_LEVELS,
+    #         EMB_SIZE,
+    #         prev_samples)
+    #     # (BATCH_SIZE*N_FRAMES*FRAME_SIZE, FRAME_SIZE_DNN, EMB_SIZE), f32
+    #     last_out_shape = EMB_SIZE
+    # else:
+    #     raise ValueError('EMB_SIZE cannot be negative.')
 
     prev_samples = prev_samples.reshape((-1, FRAME_SIZE_DNN * last_out_shape))
 
