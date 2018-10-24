@@ -637,7 +637,7 @@ other_train_fn = theano.function(
 )
 """
 train_fn = theano.function(
-    [sequences, sequences_lab, sequences_lab_big, big_h0, h0, reset, mask],
+    [noise, sequences_lab, sequences_lab_big, big_h0, h0, reset, mask],
     [cost, new_big_h0, new_h0],
     updates=updates,
     on_unused_input='warn'
