@@ -462,7 +462,7 @@ def sample_level_predictor(frame_level_outputs, prev_samples):
     # )
 
     # out += frame_level_outputs
-    out = T.concatenate([prev_samples, frame_level_outputs], axis=2)
+    out = T.concatenate([prev_samples, frame_level_outputs])
     # change to out = frame_level_outputs, as frame_level_outputs is from tier2.
     # out = T.nnet.relu(out)  # commented out to be similar to two_tier
 
