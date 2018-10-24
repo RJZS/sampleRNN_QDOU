@@ -495,7 +495,7 @@ def sample_level_predictor(frame_level_outputs, prev_samples):
 print('----got to T var---')
 # After defined graph, need to define theano variables!
 sequences   = T.imatrix('sequences')
-noise       = T.dmatrix('noise')
+noise       = T.fmatrix('noise')
 h0          = T.tensor3('h0')
 big_h0      = T.tensor3('big_h0')
 reset       = T.iscalar('reset')
@@ -524,15 +524,19 @@ big_input_sequences = sequences[:, :-BIG_FRAME_SIZE]
 input_sequences = sequences[:, BIG_FRAME_SIZE-FRAME_SIZE:-FRAME_SIZE]
 target_sequences = sequences[:, BIG_FRAME_SIZE:]
 
+big_input_noise = noise[:, :-BIG_FRAME_SIZE]
+input_noise = noise[:, BIG_FRAME_SIZE-FRAME_SIZE:-FRAME_SIZE]
+target_noise = noise[:, BIG_FRAME_SIZE:]
+
 target_mask = mask[:, BIG_FRAME_SIZE:]
 
 #---debug---
 #pdb.set_trace()
 #---debug---
 # Defines relationship between the variables. This isn't computed yet!
-big_frame_level_outputs, new_big_h0, big_frame_independent_preds = big_frame_level_rnn(big_input_sequences, sequences_lab_big, big_h0, reset)
+big_frame_level_outputs, new_big_h0, big_frame_independent_preds = big_frame_level_rnn(big_input_noise, sequences_lab_big, big_h0, reset)
 
-frame_level_outputs, new_h0 = frame_level_rnn(input_sequences, sequences_lab, big_frame_level_outputs, h0, reset)
+frame_level_outputs, new_h0 = frame_level_rnn(input_noise, sequences_lab, big_frame_level_outputs, h0, reset)
 
 prev_samples = sequences[:, BIG_FRAME_SIZE-FRAME_SIZE_DNN:-1]
 prev_samples = prev_samples.reshape((1, BATCH_SIZE, 1, -1))
