@@ -266,7 +266,7 @@ def big_frame_level_rnn(input_sequences, input_sequences_lab_big, h0, reset):
         # input_sequences_lab_big *= lib.floatX(2) # 0< data <2
         # input_sequences_lab_big -= lib.floatX(1) # -1< data <1
         # input_sequences_lab_big *= lib.floatX(2) # -2< data <2
-        
+
         # frames = (frames.astype('float32') / lib.floatX(Q_LEVELS/2)) - lib.floatX(1)
         # frames *= lib.floatX(2)
         frames = T.concatenate([frames, input_sequences_lab_big], axis=2)
@@ -360,7 +360,7 @@ def frame_level_rnn(input_sequences, input_sequences_lab, other_input, h0, reset
         # input_sequences_lab *= lib.floatX(2) # 0< data <2
         # input_sequences_lab -= lib.floatX(1) # -1< data <1
         # input_sequences_lab *= lib.floatX(2) # -2< data <2
-
+        #
         # frames = (frames.astype('float32') / lib.floatX(Q_LEVELS/2)) - lib.floatX(1)
         # frames *= lib.floatX(2)
 
@@ -448,20 +448,21 @@ def sample_level_predictor(frame_level_outputs, prev_samples):
     # else:
     #     raise ValueError('EMB_SIZE cannot be negative.')
 
-    prev_samples = prev_samples.reshape((-1, FRAME_SIZE_DNN * last_out_shape))
+    # prev_samples = prev_samples.reshape((-1, FRAME_SIZE_DNN * last_out_shape))
 
     # comment out this block
-    out = lib.ops.Linear(
-        'SampleLevel.L1_PrevSamples',
-        FRAME_SIZE_DNN * last_out_shape,
-        DIM,
-        prev_samples,
-        biases=False,
-        initialization='he',
-        weightnorm=WEIGHT_NORM
-    )
+    # out = lib.ops.Linear(
+    #     'SampleLevel.L1_PrevSamples',
+    #     FRAME_SIZE_DNN * last_out_shape,
+    #     DIM,
+    #     prev_samples,
+    #     biases=False,
+    #     initialization='he',
+    #     weightnorm=WEIGHT_NORM
+    # )
 
-    out += frame_level_outputs
+    # out += frame_level_outputs
+    out = T.concatenate([prev_samples, frame_level_outputs], axis=2)
     # change to out = frame_level_outputs, as frame_level_outputs is from tier2.
     # out = T.nnet.relu(out)  # commented out to be similar to two_tier
 
@@ -493,9 +494,10 @@ def sample_level_predictor(frame_level_outputs, prev_samples):
 
 print('----got to T var---')
 # After defined graph, need to define theano variables!
-sequences   = T.dmatrix('sequences')
-h0          = T.dtensor3('h0')
-big_h0      = T.dtensor3('big_h0')
+sequences   = T.imatrix('sequences')
+noise       = T.dmatrix('noise')
+h0          = T.tensor3('h0')
+big_h0      = T.tensor3('big_h0')
 reset       = T.iscalar('reset')
 mask        = T.matrix('mask')
 if FLAG_QUANTLAB:
@@ -504,8 +506,8 @@ if FLAG_QUANTLAB:
     sequences_lab_big      = T.itensor3('sequences_lab_big')
 else:
     print('REMINDER: lab is NOT quantized')
-    sequences_lab      = T.dtensor3('sequences_lab')
-    sequences_lab_big      = T.dtensor3('sequences_lab_big')
+    sequences_lab      = T.tensor3('sequences_lab')
+    sequences_lab_big      = T.tensor3('sequences_lab_big')
     
 if args.debug:
     # Solely for debugging purposes.
@@ -660,16 +662,16 @@ test_fn = theano.function(
 
 # Sampling at big frame level
 big_frame_level_generate_fn = theano.function(
-    [sequences, sequences_lab_big, big_h0, reset],
-    big_frame_level_rnn(sequences, sequences_lab_big, big_h0, reset)[0:2],
+    [noise, sequences_lab_big, big_h0, reset],
+    big_frame_level_rnn(noise, sequences_lab_big, big_h0, reset)[0:2],
     on_unused_input='warn'
 )
 
 # Sampling at frame level
 big_frame_level_outputs = T.matrix('big_frame_level_outputs')
 frame_level_generate_fn = theano.function(
-    [sequences, sequences_lab, big_frame_level_outputs, h0, reset],
-    frame_level_rnn(sequences, sequences_lab, big_frame_level_outputs.dimshuffle(0,'x',1), h0, reset),
+    [noise, sequences_lab, big_frame_level_outputs, h0, reset],
+    frame_level_rnn(noise, sequences_lab, big_frame_level_outputs.dimshuffle(0,'x',1), h0, reset),
     on_unused_input='warn'
 )
 
@@ -677,11 +679,11 @@ frame_level_generate_fn = theano.function(
 frame_level_outputs = T.matrix('frame_level_outputs')
 prev_samples        = T.imatrix('prev_samples')
 sample_level_generate_fn = theano.function(
-    [frame_level_outputs, prev_samples],
+    [frame_level_outputs, noise],
     lib.ops.softmax_and_sample(
         sample_level_predictor(
             frame_level_outputs,
-            prev_samples
+            noise
         )
     ),
     on_unused_input='warn'
