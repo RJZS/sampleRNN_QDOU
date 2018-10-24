@@ -263,9 +263,9 @@ def big_frame_level_rnn(input_sequences, input_sequences_lab_big, h0, reset):
         # frames = (frames.astype('float32') / lib.floatX(Q_LEVELS/2)) - lib.floatX(1)
         # frames *= lib.floatX(2)
     else:
-        input_sequences_lab_big *= lib.floatX(2) # 0< data <2
-        input_sequences_lab_big -= lib.floatX(1) # -1< data <1
-        input_sequences_lab_big *= lib.floatX(2) # -2< data <2
+        # input_sequences_lab_big *= lib.floatX(2) # 0< data <2
+        # input_sequences_lab_big -= lib.floatX(1) # -1< data <1
+        # input_sequences_lab_big *= lib.floatX(2) # -2< data <2
         
         # frames = (frames.astype('float32') / lib.floatX(Q_LEVELS/2)) - lib.floatX(1)
         # frames *= lib.floatX(2)
@@ -357,9 +357,9 @@ def frame_level_rnn(input_sequences, input_sequences_lab, other_input, h0, reset
         # frames *= lib.floatX(2)
 
     else:
-        input_sequences_lab *= lib.floatX(2) # 0< data <2
-        input_sequences_lab -= lib.floatX(1) # -1< data <1
-        input_sequences_lab *= lib.floatX(2) # -2< data <2
+        # input_sequences_lab *= lib.floatX(2) # 0< data <2
+        # input_sequences_lab -= lib.floatX(1) # -1< data <1
+        # input_sequences_lab *= lib.floatX(2) # -2< data <2
 
         # frames = (frames.astype('float32') / lib.floatX(Q_LEVELS/2)) - lib.floatX(1)
         # frames *= lib.floatX(2)
@@ -494,8 +494,8 @@ def sample_level_predictor(frame_level_outputs, prev_samples):
 print('----got to T var---')
 # After defined graph, need to define theano variables!
 sequences   = T.dmatrix('sequences')
-h0          = T.tensor3('h0')
-big_h0      = T.tensor3('big_h0')
+h0          = T.dtensor3('h0')
+big_h0      = T.dtensor3('big_h0')
 reset       = T.iscalar('reset')
 mask        = T.matrix('mask')
 if FLAG_QUANTLAB:
@@ -504,8 +504,8 @@ if FLAG_QUANTLAB:
     sequences_lab_big      = T.itensor3('sequences_lab_big')
 else:
     print('REMINDER: lab is NOT quantized')
-    sequences_lab      = T.tensor3('sequences_lab')
-    sequences_lab_big      = T.tensor3('sequences_lab_big')
+    sequences_lab      = T.dtensor3('sequences_lab')
+    sequences_lab_big      = T.dtensor3('sequences_lab_big')
     
 if args.debug:
     # Solely for debugging purposes.
