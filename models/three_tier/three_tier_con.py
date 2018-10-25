@@ -260,15 +260,15 @@ def big_frame_level_rnn(input_sequences, input_sequences_lab_big, h0, reset):
         frames = T.concatenate([frames, input_sequences_lab_big], axis=2)
         # Rescale frames from ints in [0, Q_LEVELS) to floats in [-2, 2]
         # (a reasonable range to pass as inputs to the RNN)
-        # frames = (frames.astype('float32') / lib.floatX(Q_LEVELS/2)) - lib.floatX(1)
-        # frames *= lib.floatX(2)
+        frames = (frames.astype('float32') / lib.floatX(Q_LEVELS/2)) - lib.floatX(1)
+        frames *= lib.floatX(2)
     else:
-        # input_sequences_lab_big *= lib.floatX(2) # 0< data <2
-        # input_sequences_lab_big -= lib.floatX(1) # -1< data <1
-        # input_sequences_lab_big *= lib.floatX(2) # -2< data <2
-
-        # frames = (frames.astype('float32') / lib.floatX(Q_LEVELS/2)) - lib.floatX(1)
-        # frames *= lib.floatX(2)
+        input_sequences_lab_big *= lib.floatX(2) # 0< data <2
+        input_sequences_lab_big -= lib.floatX(1) # -1< data <1
+        input_sequences_lab_big *= lib.floatX(2) # -2< data <2
+        
+        frames = (frames.astype('float32') / lib.floatX(Q_LEVELS/2)) - lib.floatX(1)
+        frames *= lib.floatX(2)
         frames = T.concatenate([frames, input_sequences_lab_big], axis=2)
 
     # Initial state of RNNs
@@ -345,24 +345,24 @@ def frame_level_rnn(input_sequences, input_sequences_lab, other_input, h0, reset
 
     # Rescale frames from ints in [0, Q_LEVELS) to floats in [-2, 2]
     # (a reasonable range to pass as inputs to the RNN)
-    # frames = (frames.astype('float32') / lib.floatX(Q_LEVELS/2)) - lib.floatX(1)
-    # frames *= lib.floatX(2)
+    frames = (frames.astype('float32') / lib.floatX(Q_LEVELS/2)) - lib.floatX(1)
+    frames *= lib.floatX(2)
 
     if FLAG_QUANTLAB:
         frames = T.concatenate([frames, input_sequences_lab], axis=2)
 
         # Rescale frames from ints in [0, Q_LEVELS) to floats in [-2, 2]
         # (a reasonable range to pass as inputs to the RNN)
-        # frames = (frames.astype('float32') / lib.floatX(Q_LEVELS/2)) - lib.floatX(1)
-        # frames *= lib.floatX(2)
+        frames = (frames.astype('float32') / lib.floatX(Q_LEVELS/2)) - lib.floatX(1)
+        frames *= lib.floatX(2)
 
     else:
-        # input_sequences_lab *= lib.floatX(2) # 0< data <2
-        # input_sequences_lab -= lib.floatX(1) # -1< data <1
-        # input_sequences_lab *= lib.floatX(2) # -2< data <2
-        #
-        # frames = (frames.astype('float32') / lib.floatX(Q_LEVELS/2)) - lib.floatX(1)
-        # frames *= lib.floatX(2)
+        input_sequences_lab *= lib.floatX(2) # 0< data <2
+        input_sequences_lab -= lib.floatX(1) # -1< data <1
+        input_sequences_lab *= lib.floatX(2) # -2< data <2
+
+        frames = (frames.astype('float32') / lib.floatX(Q_LEVELS/2)) - lib.floatX(1)
+        frames *= lib.floatX(2)
 
         # Concatenating samples with conditioning vectors. just set frames = input_sequences_lab.
         frames = T.concatenate([frames, input_sequences_lab], axis=2)
@@ -433,36 +433,35 @@ def sample_level_predictor(frame_level_outputs, prev_samples):
     output.shape:              (batch size, Q_LEVELS)
     """
     # Handling EMB_SIZE
-    # if EMB_SIZE == 0:  # no support for one-hot in three_tier and one_tier.
-    #     prev_samples = lib.ops.T_one_hot(prev_samples, Q_LEVELS)
-    #     # (BATCH_SIZE*N_FRAMES*FRAME_SIZE, FRAME_SIZE_DNN, Q_LEVELS)
-    #     last_out_shape = Q_LEVELS
-    # elif EMB_SIZE > 0:
-    #     prev_samples = lib.ops.Embedding(
-    #         'SampleLevel.Embedding',
-    #         Q_LEVELS,
-    #         EMB_SIZE,
-    #         prev_samples)
-    #     # (BATCH_SIZE*N_FRAMES*FRAME_SIZE, FRAME_SIZE_DNN, EMB_SIZE), f32
-    #     last_out_shape = EMB_SIZE
-    # else:
-    #     raise ValueError('EMB_SIZE cannot be negative.')
+    if EMB_SIZE == 0:  # no support for one-hot in three_tier and one_tier.
+        prev_samples = lib.ops.T_one_hot(prev_samples, Q_LEVELS)
+        # (BATCH_SIZE*N_FRAMES*FRAME_SIZE, FRAME_SIZE_DNN, Q_LEVELS)
+        last_out_shape = Q_LEVELS
+    elif EMB_SIZE > 0:
+        prev_samples = lib.ops.Embedding(
+            'SampleLevel.Embedding',
+            Q_LEVELS,
+            EMB_SIZE,
+            prev_samples)
+        # (BATCH_SIZE*N_FRAMES*FRAME_SIZE, FRAME_SIZE_DNN, EMB_SIZE), f32
+        last_out_shape = EMB_SIZE
+    else:
+        raise ValueError('EMB_SIZE cannot be negative.')
 
-    # prev_samples = prev_samples.reshape((-1, FRAME_SIZE_DNN * last_out_shape))
+    prev_samples = prev_samples.reshape((-1, FRAME_SIZE_DNN * last_out_shape))
 
     # comment out this block
-    # out = lib.ops.Linear(
-    #     'SampleLevel.L1_PrevSamples',
-    #     FRAME_SIZE_DNN * last_out_shape,
-    #     DIM,
-    #     prev_samples,
-    #     biases=False,
-    #     initialization='he',
-    #     weightnorm=WEIGHT_NORM
-    # )
+    out = lib.ops.Linear(
+        'SampleLevel.L1_PrevSamples',
+        FRAME_SIZE_DNN * last_out_shape,
+        DIM,
+        prev_samples,
+        biases=False,
+        initialization='he',
+        weightnorm=WEIGHT_NORM
+    )
 
-    # out += frame_level_outputs
-    out = T.concatenate([prev_samples, frame_level_outputs])
+    out += frame_level_outputs
     # change to out = frame_level_outputs, as frame_level_outputs is from tier2.
     # out = T.nnet.relu(out)  # commented out to be similar to two_tier
 
@@ -494,8 +493,7 @@ def sample_level_predictor(frame_level_outputs, prev_samples):
 
 print('----got to T var---')
 # After defined graph, need to define theano variables!
-sequences   = T.imatrix('sequences')
-noise       = T.fmatrix('noise')
+sequences   = T.dmatrix('sequences')
 h0          = T.tensor3('h0')
 big_h0      = T.tensor3('big_h0')
 reset       = T.iscalar('reset')
@@ -524,19 +522,15 @@ big_input_sequences = sequences[:, :-BIG_FRAME_SIZE]
 input_sequences = sequences[:, BIG_FRAME_SIZE-FRAME_SIZE:-FRAME_SIZE]
 target_sequences = sequences[:, BIG_FRAME_SIZE:]
 
-big_input_noise = noise[:, :-BIG_FRAME_SIZE]
-input_noise = noise[:, BIG_FRAME_SIZE-FRAME_SIZE:-FRAME_SIZE]
-target_noise = noise[:, BIG_FRAME_SIZE:]
-
 target_mask = mask[:, BIG_FRAME_SIZE:]
 
 #---debug---
 #pdb.set_trace()
 #---debug---
 # Defines relationship between the variables. This isn't computed yet!
-big_frame_level_outputs, new_big_h0, big_frame_independent_preds = big_frame_level_rnn(big_input_noise, sequences_lab_big, big_h0, reset)
+big_frame_level_outputs, new_big_h0, big_frame_independent_preds = big_frame_level_rnn(big_input_sequences, sequences_lab_big, big_h0, reset)
 
-frame_level_outputs, new_h0 = frame_level_rnn(input_noise, sequences_lab, big_frame_level_outputs, h0, reset)
+frame_level_outputs, new_h0 = frame_level_rnn(input_sequences, sequences_lab, big_frame_level_outputs, h0, reset)
 
 prev_samples = sequences[:, BIG_FRAME_SIZE-FRAME_SIZE_DNN:-1]
 prev_samples = prev_samples.reshape((1, BATCH_SIZE, 1, -1))
@@ -637,7 +631,7 @@ other_train_fn = theano.function(
 )
 """
 train_fn = theano.function(
-    [noise, sequences_lab, sequences_lab_big, big_h0, h0, reset, mask],
+    [sequences, sequences_lab, sequences_lab_big, big_h0, h0, reset, mask],
     [cost, new_big_h0, new_h0],
     updates=updates,
     on_unused_input='warn'
@@ -659,23 +653,23 @@ other_test_fn = theano.function(
 )
 """
 test_fn = theano.function(
-    [noise, sequences_lab, sequences_lab_big, big_h0, h0, reset, mask],
+    [sequences, sequences_lab, sequences_lab_big, big_h0, h0, reset, mask],
     [cost, new_big_h0, new_h0],
     on_unused_input='warn'
 )
 
 # Sampling at big frame level
 big_frame_level_generate_fn = theano.function(
-    [noise, sequences_lab_big, big_h0, reset],
-    big_frame_level_rnn(noise, sequences_lab_big, big_h0, reset)[0:2],
+    [sequences, sequences_lab_big, big_h0, reset],
+    big_frame_level_rnn(sequences, sequences_lab_big, big_h0, reset)[0:2],
     on_unused_input='warn'
 )
 
 # Sampling at frame level
 big_frame_level_outputs = T.matrix('big_frame_level_outputs')
 frame_level_generate_fn = theano.function(
-    [noise, sequences_lab, big_frame_level_outputs, h0, reset],
-    frame_level_rnn(noise, sequences_lab, big_frame_level_outputs.dimshuffle(0,'x',1), h0, reset),
+    [sequences, sequences_lab, big_frame_level_outputs, h0, reset],
+    frame_level_rnn(sequences, sequences_lab, big_frame_level_outputs.dimshuffle(0,'x',1), h0, reset),
     on_unused_input='warn'
 )
 
@@ -683,11 +677,11 @@ frame_level_generate_fn = theano.function(
 frame_level_outputs = T.matrix('frame_level_outputs')
 prev_samples        = T.imatrix('prev_samples')
 sample_level_generate_fn = theano.function(
-    [frame_level_outputs, noise],
+    [frame_level_outputs, prev_samples],
     lib.ops.softmax_and_sample(
         sample_level_predictor(
             frame_level_outputs,
-            noise
+            prev_samples
         )
     ),
     on_unused_input='warn'
@@ -750,6 +744,8 @@ def generate_and_save_samples(tag):
     big_frame_level_outputs = None
     frame_level_outputs = None
 
+    condition_noise = numpy.random.normal(size=(N_SEQS, LENGTH))
+
     for t in xrange(BIG_FRAME_SIZE, LENGTH):
 
         if t % BIG_FRAME_SIZE == 0:
@@ -757,7 +753,7 @@ def generate_and_save_samples(tag):
             tmp = tmp.reshape(tmp.shape[0],1,tmp.shape[1])
             
             big_frame_level_outputs, big_h0 = big_frame_level_generate_fn(
-                samples[:, t-BIG_FRAME_SIZE:t],
+                condition_noise[:, t-BIG_FRAME_SIZE:t],
                 tmp,
                 big_h0,
                 numpy.int32(t == BIG_FRAME_SIZE)
@@ -769,7 +765,7 @@ def generate_and_save_samples(tag):
             tmp = tmp.reshape(tmp.shape[0],1,tmp.shape[1])
             
             frame_level_outputs, h0 = frame_level_generate_fn(
-                samples[:, t-FRAME_SIZE:t],
+                condition_noise[:, t-FRAME_SIZE:t],
                 tmp,
                 big_frame_level_outputs[:, (t / FRAME_SIZE) % (BIG_FRAME_SIZE / FRAME_SIZE)],
                 h0,
@@ -778,7 +774,7 @@ def generate_and_save_samples(tag):
 
         samples[:, t] = sample_level_generate_fn(
             frame_level_outputs[:, t % FRAME_SIZE],
-            samples[:, t-FRAME_SIZE_DNN:t]
+            condition_noise[:, t-FRAME_SIZE_DNN:t]
         )
 
     total_time = time() - total_time
