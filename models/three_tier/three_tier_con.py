@@ -744,7 +744,12 @@ def generate_and_save_samples(tag):
     big_frame_level_outputs = None
     frame_level_outputs = None
 
+    # Generate the noise, normalise and quantise to 256 levels.
     condition_noise = numpy.random.normal(size=(N_SEQS, LENGTH))
+    condition_noise = condition_noise/max(condition_noise)
+    condition_noise = condition_noise * 255
+    condition_noise = np.round(condition_noise)
+    condition_noise = condition_noise.astype(int)
 
     for t in xrange(BIG_FRAME_SIZE, LENGTH):
 
