@@ -749,7 +749,7 @@ def generate_and_save_samples(tag):
     condition_noise = (condition_noise/np.amax(np.abs(condition_noise))) + 1
     condition_noise = (condition_noise * 255) / 2
     condition_noise = np.round(condition_noise)
-    condition_noise = condition_noise.astype(int)
+    condition_noise = condition_noise.astype(np.int32)
 
     for t in xrange(BIG_FRAME_SIZE, LENGTH):
 
