@@ -493,7 +493,7 @@ def sample_level_predictor(frame_level_outputs, prev_samples):
 
 print('----got to T var---')
 # After defined graph, need to define theano variables!
-sequences   = T.dmatrix('sequences')
+sequences   = T.imatrix('sequences')
 h0          = T.tensor3('h0')
 big_h0      = T.tensor3('big_h0')
 reset       = T.iscalar('reset')
