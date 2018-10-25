@@ -746,8 +746,8 @@ def generate_and_save_samples(tag):
 
     # Generate the noise, normalise and quantise to 256 levels.
     condition_noise = numpy.random.normal(size=(N_SEQS, LENGTH))
-    condition_noise = condition_noise/max(condition_noise)
-    condition_noise = condition_noise * 255
+    condition_noise = (condition_noise/np.amax(np.abs(condition_noise))) + 1
+    condition_noise = (condition_noise * 255) / 2
     condition_noise = np.round(condition_noise)
     condition_noise = condition_noise.astype(int)
 
