@@ -1,12 +1,16 @@
 import numpy as np
 import os
+import re
 
 dataset_folders = os.listdir('speech')
 
 for the_folder in dataset_folders:
+    # Generate a list of the datasets in that folder, ie ['speech_test', 'speech_valid', etc...]
     datasets = os.listdir('speech/{}'.format(the_folder))
-    for the_file in datasets:
-        # Generate a list of the datasets in that folder, ie ['speech_test', 'speech_valid', etc...]
+    regex = re.compile(r'\b.*(test|train|valid).*.npy[^(noise)]\b')
+    filtered_datasets = [i for i in datasets if not regex.search(i)]
+    
+    for the_file in filtered_datasets:
         data = np.load('speech/{}/{}'.format(the_folder, the_file))
 
         # Generate the noise, normalise and quantise to 256 levels.
@@ -17,5 +21,3 @@ for the_folder in dataset_folders:
         noise = noise.astype(np.int32)
         np.save('speech/{}/{}_noise.npy'.format(the_folder, the_file[:-4]), noise)
         print "{}/{}_noise.npy".format(the_folder, the_file[:-4])
-
-# TODO: Remove any file ending in _noise.npy from 'data' list.
