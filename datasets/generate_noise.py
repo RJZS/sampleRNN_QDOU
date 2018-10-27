@@ -15,3 +15,5 @@ for the_folder in dataset_folders:
         noise = (noise * 255) / 2
         noise = np.round(noise)
         noise = noise.astype(np.int32)
+        np.save('speech/{}/{}_noise.npy'.format(the_folder, the_file[:-4]), noise)
+        print "{}/{}_noise.npy".format(the_folder, the_file[:-4])
