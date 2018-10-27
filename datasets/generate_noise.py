@@ -10,13 +10,17 @@ for the_folder in dataset_folders:
 
     for the_file in datasets:
         if ("noise" not in the_file) and (".npy" in the_file):
-            data = np.load('speech/{}/{}'.format(the_folder, the_file))
+            try:
+                data = np.load('speech/{}/{}'.format(the_folder, the_file))
 
             # Generate the noise, normalise and quantise to 256 levels.
-            noise = np.random.normal(size=np.shape(data))
-            noise = (noise / np.amax(np.abs(noise))) + 1
-            noise = (noise * 255) / 2
-            noise = np.round(noise)
-            noise = noise.astype(np.int32)
-            np.save('speech/{}/{}_noise.npy'.format(the_folder, the_file[:-4]), noise)
-            print "{}/{}_noise.npy".format(the_folder, the_file[:-4])
+                noise = np.random.normal(size=np.shape(data))
+                noise = (noise / np.amax(np.abs(noise))) + 1
+                noise = (noise * 255) / 2
+                noise = np.round(noise)
+                noise = noise.astype(np.int32)
+                np.save('speech/{}/{}_noise.npy'.format(the_folder, the_file[:-4]), noise)
+                print "{}/{}_noise.npy".format(the_folder, the_file[:-4])
+            except MemoryError:
+                print("Memory error for {}/{}".format(the_folder, the_file[:-4]))
+                continue
