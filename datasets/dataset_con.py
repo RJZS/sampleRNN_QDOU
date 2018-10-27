@@ -95,7 +95,7 @@ if FLAG_NORMED_ALRDY:
         if flag_dict['ACOUSTIC']:
             __speech_file_lab = 'speech/BLSTM_resil_Lesley_traj_full/speech_{}_traj.npy'  # lesley data
 else:
-    if WHICH_SET == 'SPEECH':
+    if WHICH_SET == 'SPEECH': # Speech means NICK set.
         __speech_file = 'speech/manuAlign_float32_cutEnd/speech_{}.npy'  # in float16 8secs*16000samples/sec
         __speech_file_lab = 'speech/lab_norm_01_train/speech_{}_lab.npy'  # in float16 8secs*16000samples/sec
         # __speech_file = 'speech/MA_f32_CE_5s/speech_{}.npy'
