@@ -9,7 +9,7 @@ for the_folder in dataset_folders:
     datasets = os.listdir('speech/{}'.format(the_folder))
 
     for the_file in datasets:
-        if ("noise" not in the_file) and (".npy" in the_file):
+        if ("noise" not in the_file) and ("lab" not in the_file) and (".npy" in the_file):
             try:
                 data = np.load('speech/{}/{}'.format(the_folder, the_file))
 
