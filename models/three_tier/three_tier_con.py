@@ -814,6 +814,7 @@ def monitor(data_feeder):
     _data_feeder = load_data(data_feeder)
     for _seqs, _reset, _mask, _seqs_lab, _seqs_noise in _data_feeder:
         _seqs_lab_big = get_lab_big(_seqs_lab)
+        _seqs_noise = _seqs_noise.astype(numpy.int32)
         _cost, _big_h0, _h0 = test_fn(_seqs, _seqs_lab, _seqs_lab_big, _big_h0, _h0, _reset, _mask, _seqs_noise)
         _costs.append(_cost)
 
@@ -923,6 +924,7 @@ while True:
 
     start_time = time()
     # pdb.set_trace()
+    seqs_noise = seqs_noise.astype(numpy.int32)
     cost, big_h0, h0 = train_fn(seqs, seqs_lab, seqs_lab_big, big_h0, h0, reset, mask, seqs_noise)
     total_time += time() - start_time
     #print "This cost:", cost, "This h0.mean()", h0.mean()
