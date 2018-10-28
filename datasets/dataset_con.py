@@ -80,23 +80,28 @@ if FLAG_NORMED_ALRDY:
     if WHICH_SET == 'SPEECH':
         if FLAG_NORMED_UTT:
             __speech_file = 'speech/ln_MA_f32_CE_8s_norm_utt/speech_{}.npy'  # normed on utt level: zero mean, increased volume
+            __speech_file_noise = 'speech/ln_MA_f32_CE_8s_norm_utt/speech_{}_noise.npy'
         else:
             __speech_file = 'speech/manuCutAlign_f32_norm_rmDC/speech_{}.npy'  # normed on cps level: zero mean
+            __speech_file_noise = 'speech/manuCutAlign_f32_norm_rmDC/speech_{}_noise.npy'
             #__speech_file = 'speech/manuAlign_float32_cutEnd_norm/speech_{}.npy'  # in float16 8secs*16000samples/sec
         __speech_file_lab = 'speech/lab_norm_01_train/speech_{}_lab.npy'  # in float16 8secs*16000samples/sec
         if flag_dict['ACOUSTIC']:
             __speech_file_lab = 'speech/MA_traj_8s_norm/speech_{}_traj.npy'  # Nick data
             if FLAG_FT:
                 __speech_file = 'speech/MA_8s_norm_NCY/speech_{}.npy'  # normed on utt level: zero mean, increased volume
+                __speech_file_noise = 'speech/MA_8s_norm_NCY/speech_{}_noise.npy'
                 __speech_file_lab = 'speech/MA_traj_8s_norm_NCY/speech_{}_traj.npy'  # Nick data
     if WHICH_SET == 'LESLEY':
         __speech_file = 'speech/ln_16k_resil_Lesley_norm_utt/speech_{}.npy'  # lesley data
+        __speech_file_noise = 'speech/ln_16k_resil_Lesley_norm_utt/speech_{}_noise.npy'
         __speech_file_lab = 'speech/ln_16k_resil_Lesley_lab_norm/speech_{}_lab.npy'  # lesley data
         if flag_dict['ACOUSTIC']:
             __speech_file_lab = 'speech/BLSTM_resil_Lesley_traj_full/speech_{}_traj.npy'  # lesley data
 else:
     if WHICH_SET == 'SPEECH': # Speech means NICK set.
         __speech_file = 'speech/manuAlign_float32_cutEnd/speech_{}.npy'  # in float16 8secs*16000samples/sec
+        __speech_file_noise = 'speech/manuAlign_float32_cutEnd/speech_{}_noise.npy'
         __speech_file_lab = 'speech/lab_norm_01_train/speech_{}_lab.npy'  # in float16 8secs*16000samples/sec
         # __speech_file = 'speech/MA_f32_CE_5s/speech_{}.npy'
         # __speech_file_lab = 'speech/lab_norm_01_train_5s/speech_{}_lab.npy'  # in float16 5secs*16000samples/sec
@@ -105,11 +110,13 @@ else:
     if WHICH_SET == 'LESLEY':
         # __speech_file = 'speech/16k_resil_Lesley/speech_{}.npy'  # lesley data, changed dir, should be replaced by the following line
         __speech_file = 'speech/16k_resil_Lesley_full/speech_{}.npy'  # lesley data
+        __speech_file_noise = 'speech/16k_resil_Lesley_full/speech_{}_noise.npy'
         __speech_file_lab = 'speech/ln_16k_resil_Lesley_lab_norm/speech_{}_lab.npy'  # lesley data
         if flag_dict['ACOUSTIC']:
             # __speech_file = 'speech/16k_resil_Lesley/speech_{}.npy'
             # __speech_file_lab = 'speech/BLSTM_resil_Lesley_traj/speech_{}_traj.npy'  # lesley data
             __speech_file = 'speech/16k_resil_Lesley_full/speech_{}.npy'
+            __speech_file_noise = 'speech/16k_resil_Lesley_full/speech_{}_noise.npy'
             __speech_file_lab = 'speech/BLSTM_resil_Lesley_traj_full/speech_{}_traj.npy'  # lesley data
             
 import sys
@@ -334,6 +341,7 @@ def get_files_init(batch,overlap):
 ### SPEECH DATASET LOADER ###
 def __speech_feed_epoch(files,
                         files_lab,
+                        files_noise,
                         frame_size,
                         batch_size,
                        seq_len,
@@ -379,6 +387,7 @@ def __speech_feed_epoch(files,
         files = numpy.concatenate((files_init,files),axis=1)
     
     batches = __make_random_batches(files, batch_size)
+    batches_noise = __make_random_batches(files_noise, batch_size)
     batches_lab = __make_random_batches(files_lab, batch_size)
     
     assert seq_len % lab_len == 0,\
@@ -387,7 +396,7 @@ def __speech_feed_epoch(files,
     up_rate = LAB_SIZE/frame_size
     seq_len_lab = seq_len / lab_len * up_rate #also =seq_len / frame_size
 
-    for bch,bch_lab in zip(batches,batches_lab):
+    for bch,bch_lab,bch_noise in zip(batches,batches_lab,batches_noise):
         # batch_seq_len = length of longest sequence in the batch, rounded up to
         # the nearest SEQ_LEN.
         batch_seq_len = len(bch[0])  # should be 8*16000
@@ -396,9 +405,14 @@ def __speech_feed_epoch(files,
         ##label##
         batch_seq_len_lab = len(bch_lab[0])  # should be 8*16000 / 80 * up_rate
         #batch_seq_len_lab = __round_to(batch_seq_len_lab, seq_len_lab)
-        
+
         #deal with ending
         batch = numpy.zeros(
+            (batch_size, batch_seq_len),
+            dtype='float32'
+        )
+
+        batch_noise = numpy.zeros(
             (batch_size, batch_seq_len),
             dtype='float32'
         )
@@ -412,7 +426,9 @@ def __speech_feed_epoch(files,
             # This shouldn't change anything. All the flac files for Speech
             # are the same length and the mask should be 1 every where.
             # mask[i, len(data):] = numpy.float32(0)
-        
+
+        for i, data in enumerate(bch_noise):
+            batch_noise[i, :len(data)] = data
         ##label##
         batch_lab = upsample(bch_lab,up_rate).astype('float32')
         
@@ -426,6 +442,10 @@ def __speech_feed_epoch(files,
                     numpy.full((batch_size, overlap), q_zero, dtype='int32'),
                     batch
                 ], axis=1)
+                batch_noise = numpy.concatenate([
+                    numpy.full((batch_size, overlap), q_zero, dtype='int32'),
+                    batch
+                ], axis=1)
         else:
             batch -= __speech_train_mean_std[0]
             batch /= __speech_train_mean_std[1]
@@ -435,6 +455,10 @@ def __speech_feed_epoch(files,
                     numpy.full((batch_size, overlap), 0, dtype='float32'),
                     batch
                 ], axis=1).astype('float32')
+                batch_noise = numpy.concatenate([
+                    numpy.full((batch_size, overlap), q_zero, dtype='int32'),
+                    batch
+                ], axis=1)
 
         mask = numpy.concatenate([
             numpy.full((batch_size, overlap), 1, dtype='float32'),
@@ -447,9 +471,10 @@ def __speech_feed_epoch(files,
             reset = numpy.int32(i==0)
             subbatch = batch[:, i*seq_len : (i+1)*seq_len + overlap]
             submask = mask[:, i*seq_len : (i+1)*seq_len + overlap]
-            
+
+            subbatch_noise = batch_noise[:, i * seq_len: (i + 1) * seq_len + overlap]
             subbatch_lab = batch_lab[:, i*seq_len_lab : (i+1)*seq_len_lab]
-            yield (subbatch, reset, submask, subbatch_lab)
+            yield (subbatch, reset, submask, subbatch_lab, subbatch_noise)
 
 
 def speech_train_feed_epoch(*args):
@@ -480,12 +505,14 @@ def speech_train_feed_epoch(*args):
     find_dataset(__test(__speech_file))
     # Load train set
     tmp = __train(__speech_file)
+    tmp_noise = __train(__speech_file_noise)
     tmp_lab = __train(__speech_file_lab)
     # if WHICH_SET=='VCBK':
     if flag_dict['SPLIT']:
         # idx = random.randint(0, 9)
         idx = int(time.time())%10
         tmp = tmp.replace('train','train_'+str(idx))
+        tmp_noise = tmp.replace('train', 'train_' + str(idx))
         tmp_lab = tmp_lab.replace('train','train_'+str(idx))
         print('')
         print('REMINDER: using split {} for training'.format(idx))
@@ -493,6 +520,8 @@ def speech_train_feed_epoch(*args):
         
     data_path = find_dataset(tmp)
     files = numpy.load(data_path)
+    data_path = find_dataset(tmp_noise)
+    files_noise = numpy.load(data_path)
     data_path = find_dataset(tmp_lab)
     files_lab = numpy.load(data_path)
     
@@ -500,6 +529,7 @@ def speech_train_feed_epoch(*args):
         tmp_ft = para_dict['FT']
         nb_row = files.shape[0]
         files = files[:int(nb_row*tmp_ft/100)]
+        files_noise = files_noise[:int(nb_row * tmp_ft / 100)]
         files_lab = files_lab[:int(nb_row*tmp_ft/100)]
         print('')
         print('REMINDER: fine tuning using {}/100 of training data'.format(tmp_ft))
@@ -515,14 +545,14 @@ def speech_train_feed_epoch(*args):
     #     print('REMINDER: fine tuning using {}/100 of training data'.format(tmp_ft))
     #     print('')
         
-    generator = __speech_feed_epoch(files, files_lab, *args)
+    generator = __speech_feed_epoch(files, files_lab, files_noise, *args)
     if FLAG_LESSDATA_DEBUG:
         print('')
         print('REMINDER: using less training data to debug code')
         print('')
-        generator = __speech_feed_epoch(files[:40], files_lab[:40], *args)
+        generator = __speech_feed_epoch(files[:40], files_lab[:40], files_noise[:40], *args)
     else:
-        generator = __speech_feed_epoch(files, files_lab, *args)
+        generator = __speech_feed_epoch(files, files_lab, files_noise, *args)
     return generator
 
 def speech_valid_feed_epoch(*args):
@@ -532,9 +562,11 @@ def speech_valid_feed_epoch(*args):
     """
     data_path = find_dataset(__valid(__speech_file))
     files = numpy.load(data_path)
+    data_path = find_dataset(__valid(__speech_file_noise))
+    files_noise = numpy.load(data_path)
     data_path = find_dataset(__valid(__speech_file_lab))
     files_lab = numpy.load(data_path)
-    generator = __speech_feed_epoch(files, files_lab, *args)
+    generator = __speech_feed_epoch(files, files_lab, files_noise, *args)
     return generator
 
 def speech_test_feed_epoch(*args):
@@ -544,7 +576,9 @@ def speech_test_feed_epoch(*args):
     """
     data_path = find_dataset(__test(__speech_file))
     files = numpy.load(data_path)
+    data_path = find_dataset(__test(__speech_file_noise))
+    files_noise = numpy.load(data_path)
     data_path = find_dataset(__test(__speech_file_lab))
     files_lab = numpy.load(data_path)
-    generator = __speech_feed_epoch(files, files_lab, *args)
+    generator = __speech_feed_epoch(files, files_lab, files_noise, *args)
     return generator

@@ -494,6 +494,7 @@ def sample_level_predictor(frame_level_outputs, prev_samples):
 print('----got to T var---')
 # After defined graph, need to define theano variables!
 sequences   = T.imatrix('sequences')
+noise       = T.imatrix('noise')
 h0          = T.tensor3('h0')
 big_h0      = T.tensor3('big_h0')
 reset       = T.iscalar('reset')
@@ -518,8 +519,8 @@ if args.debug:
     mask.tag.test_value = numpy.ones((BATCH_SIZE, SEQ_LEN+OVERLAP), dtype='float32')
 
 
-big_input_sequences = sequences[:, :-BIG_FRAME_SIZE]
-input_sequences = sequences[:, BIG_FRAME_SIZE-FRAME_SIZE:-FRAME_SIZE]
+input_sequences = noise[:, BIG_FRAME_SIZE-FRAME_SIZE:-FRAME_SIZE] # Condition target sequence on this input sequence.
+big_input_sequences = noise[:, :-BIG_FRAME_SIZE]
 target_sequences = sequences[:, BIG_FRAME_SIZE:]
 
 target_mask = mask[:, BIG_FRAME_SIZE:]
@@ -631,7 +632,7 @@ other_train_fn = theano.function(
 )
 """
 train_fn = theano.function(
-    [sequences, sequences_lab, sequences_lab_big, big_h0, h0, reset, mask],
+    [sequences, sequences_lab, sequences_lab_big, big_h0, h0, reset, mask, noise], # Add noise as input here.
     [cost, new_big_h0, new_h0],
     updates=updates,
     on_unused_input='warn'
@@ -653,7 +654,7 @@ other_test_fn = theano.function(
 )
 """
 test_fn = theano.function(
-    [sequences, sequences_lab, sequences_lab_big, big_h0, h0, reset, mask],
+    [sequences, sequences_lab, sequences_lab_big, big_h0, h0, reset, mask, noise],
     [cost, new_big_h0, new_h0],
     on_unused_input='warn'
 )
@@ -692,6 +693,8 @@ sample_level_generate_fn = theano.function(
 # to samples in a simple way. [it's disabled]
 
 FLAG_USETRAIN_WHENTEST = False
+# Used for monitoring model progress.
+# When ready to actually generate samples properly, use --gen.
 def generate_and_save_samples(tag):
     def write_audio_file(name, data):
         data = data.astype('float32')
@@ -744,21 +747,19 @@ def generate_and_save_samples(tag):
     big_frame_level_outputs = None
     frame_level_outputs = None
 
-    # Generate the noise, normalise and quantise to 256 levels.
-    condition_noise = numpy.random.normal(size=(N_SEQS, LENGTH))
-    condition_noise = (condition_noise/numpy.amax(numpy.abs(condition_noise))) + 1
-    condition_noise = (condition_noise * 255) / 2
-    condition_noise = numpy.round(condition_noise)
-    condition_noise = condition_noise.astype(numpy.int32)
-
-    for t in xrange(BIG_FRAME_SIZE, LENGTH):
+    # LENGTH is length of utterance to generate.
+    # Take one frame of silence, then start at index BIG_FRAME_SIZE.
+    # Do this for training and debugging.
+    # As the RNN needs initial state.
+    # Once model is good enough, actually use 20 frames.
+    for t in xrange(BIG_FRAME_SIZE, LENGTH): # for loop going sample by sample
 
         if t % BIG_FRAME_SIZE == 0:
             tmp = samples_lab_big[:,(t-BIG_FRAME_SIZE)//BIG_FRAME_SIZE,:]
             tmp = tmp.reshape(tmp.shape[0],1,tmp.shape[1])
             
             big_frame_level_outputs, big_h0 = big_frame_level_generate_fn(
-                condition_noise[:, t-BIG_FRAME_SIZE:t],
+                samples[:, t-BIG_FRAME_SIZE:t],
                 tmp,
                 big_h0,
                 numpy.int32(t == BIG_FRAME_SIZE)
@@ -770,7 +771,7 @@ def generate_and_save_samples(tag):
             tmp = tmp.reshape(tmp.shape[0],1,tmp.shape[1])
             
             frame_level_outputs, h0 = frame_level_generate_fn(
-                condition_noise[:, t-FRAME_SIZE:t],
+                samples[:, t-FRAME_SIZE:t],
                 tmp,
                 big_frame_level_outputs[:, (t / FRAME_SIZE) % (BIG_FRAME_SIZE / FRAME_SIZE)],
                 h0,
@@ -779,7 +780,7 @@ def generate_and_save_samples(tag):
 
         samples[:, t] = sample_level_generate_fn(
             frame_level_outputs[:, t % FRAME_SIZE],
-            condition_noise[:, t-FRAME_SIZE_DNN:t]
+            samples[:, t-FRAME_SIZE_DNN:t]
         )
 
     total_time = time() - total_time
@@ -811,9 +812,9 @@ def monitor(data_feeder):
     _big_h0 = numpy.zeros((BATCH_SIZE, N_RNN, H0_MULT*BIG_DIM), dtype='float32')
     _costs = []
     _data_feeder = load_data(data_feeder)
-    for _seqs, _reset, _mask, _seqs_lab in _data_feeder:
+    for _seqs, _reset, _mask, _seqs_lab, _seqs_noise in _data_feeder:
         _seqs_lab_big = get_lab_big(_seqs_lab)
-        _cost, _big_h0, _h0 = test_fn(_seqs, _seqs_lab, _seqs_lab_big, _big_h0, _h0, _reset, _mask)
+        _cost, _big_h0, _h0 = test_fn(_seqs, _seqs_lab, _seqs_lab_big, _big_h0, _h0, _reset, _mask, _seqs_noise)
         _costs.append(_cost)
 
     return numpy.mean(_costs), time() - _total_time
@@ -917,12 +918,12 @@ while True:
         end_of_batch = True
         print "[Another epoch]",
 
-    seqs, reset, mask, seqs_lab = mini_batch
+    seqs, reset, mask, seqs_lab, seqs_noise = mini_batch
     seqs_lab_big = get_lab_big(seqs_lab)
 
     start_time = time()
     # pdb.set_trace()
-    cost, big_h0, h0 = train_fn(seqs, seqs_lab, seqs_lab_big, big_h0, h0, reset, mask)
+    cost, big_h0, h0 = train_fn(seqs, seqs_lab, seqs_lab_big, big_h0, h0, reset, mask, seqs_noise)
     total_time += time() - start_time
     #print "This cost:", cost, "This h0.mean()", h0.mean()
 
