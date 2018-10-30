@@ -661,16 +661,16 @@ test_fn = theano.function(
 
 # Sampling at big frame level
 big_frame_level_generate_fn = theano.function(
-    [sequences, sequences_lab_big, big_h0, reset],
-    big_frame_level_rnn(sequences, sequences_lab_big, big_h0, reset)[0:2],
+    [noise, sequences_lab_big, big_h0, reset],
+    big_frame_level_rnn(noise, sequences_lab_big, big_h0, reset)[0:2],
     on_unused_input='warn'
 )
 
 # Sampling at frame level
 big_frame_level_outputs = T.matrix('big_frame_level_outputs')
 frame_level_generate_fn = theano.function(
-    [sequences, sequences_lab, big_frame_level_outputs, h0, reset],
-    frame_level_rnn(sequences, sequences_lab, big_frame_level_outputs.dimshuffle(0,'x',1), h0, reset),
+    [noise, sequences_lab, big_frame_level_outputs, h0, reset],
+    frame_level_rnn(noise, sequences_lab, big_frame_level_outputs.dimshuffle(0,'x',1), h0, reset),
     on_unused_input='warn'
 )
 
@@ -678,11 +678,11 @@ frame_level_generate_fn = theano.function(
 frame_level_outputs = T.matrix('frame_level_outputs')
 prev_samples        = T.imatrix('prev_samples')
 sample_level_generate_fn = theano.function(
-    [frame_level_outputs, prev_samples],
+    [frame_level_outputs, noise],
     lib.ops.softmax_and_sample(
         sample_level_predictor(
             frame_level_outputs,
-            prev_samples
+            noise
         )
     ),
     on_unused_input='warn'
@@ -714,6 +714,7 @@ def generate_and_save_samples(tag):
     if FLAG_GEN: LENGTH = 785*80
 
     samples = numpy.zeros((N_SEQS, LENGTH), dtype='int32')
+    samples_noise = numpy.zeros((N_SEQS, LENGTH), dtype='int32')
 
     if FLAG_USETRAIN_WHENTEST:
         print('')
@@ -723,13 +724,15 @@ def generate_and_save_samples(tag):
     else:
         testData_feeder = load_data_gen(test_feeder,LENGTH)
     mini_batch = testData_feeder.next()
-    tmp, _, _, seqs_lab, _ = mini_batch
+    tmp, _, _, seqs_lab, seqs_noise = mini_batch
     samples_lab = seqs_lab[:N_SEQS]
     
     if flag_dict['RMZERO']:
         samples[:, :BIG_FRAME_SIZE] = tmp[:N_SEQS, :BIG_FRAME_SIZE]
+        samples_noise[:, :BIG_FRAME_SIZE] = seqs_noise[:N_SEQS, :BIG_FRAME_SIZE]
     else:
         samples[:, :BIG_FRAME_SIZE] = Q_ZERO
+        samples_noise[:, :BIG_FRAME_SIZE] = Q_ZERO
     
     samples_lab_big = get_lab_big(samples_lab)
     
@@ -759,7 +762,7 @@ def generate_and_save_samples(tag):
             tmp = tmp.reshape(tmp.shape[0],1,tmp.shape[1])
             
             big_frame_level_outputs, big_h0 = big_frame_level_generate_fn(
-                samples[:, t-BIG_FRAME_SIZE:t],
+                samples_noise[:, t-BIG_FRAME_SIZE:t],
                 tmp,
                 big_h0,
                 numpy.int32(t == BIG_FRAME_SIZE)
@@ -771,7 +774,7 @@ def generate_and_save_samples(tag):
             tmp = tmp.reshape(tmp.shape[0],1,tmp.shape[1])
             
             frame_level_outputs, h0 = frame_level_generate_fn(
-                samples[:, t-FRAME_SIZE:t],
+                samples_noise[:, t-FRAME_SIZE:t],
                 tmp,
                 big_frame_level_outputs[:, (t / FRAME_SIZE) % (BIG_FRAME_SIZE / FRAME_SIZE)],
                 h0,
@@ -780,7 +783,7 @@ def generate_and_save_samples(tag):
 
         samples[:, t] = sample_level_generate_fn(
             frame_level_outputs[:, t % FRAME_SIZE],
-            samples[:, t-FRAME_SIZE_DNN:t]
+            samples_noise[:, t-FRAME_SIZE_DNN:t]
         )
 
     total_time = time() - total_time
