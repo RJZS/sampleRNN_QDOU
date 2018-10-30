@@ -723,7 +723,7 @@ def generate_and_save_samples(tag):
     else:
         testData_feeder = load_data_gen(test_feeder,LENGTH)
     mini_batch = testData_feeder.next()
-    tmp, _, _, seqs_lab = mini_batch
+    tmp, _, _, seqs_lab, _ = mini_batch
     samples_lab = seqs_lab[:N_SEQS]
     
     if flag_dict['RMZERO']:
