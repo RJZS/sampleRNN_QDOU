@@ -533,7 +533,7 @@ big_frame_level_outputs, new_big_h0, big_frame_independent_preds = big_frame_lev
 
 frame_level_outputs, new_h0 = frame_level_rnn(input_sequences, sequences_lab, big_frame_level_outputs, h0, reset)
 
-prev_samples = sequences[:, BIG_FRAME_SIZE-FRAME_SIZE_DNN:-1]
+prev_samples = noise[:, BIG_FRAME_SIZE-FRAME_SIZE_DNN:-1]
 prev_samples = prev_samples.reshape((1, BATCH_SIZE, 1, -1))
 prev_samples = T.nnet.neighbours.images2neibs(prev_samples, (1, FRAME_SIZE_DNN), neib_step=(1, 1), mode='valid')
 prev_samples = prev_samples.reshape((BATCH_SIZE * SEQ_LEN, FRAME_SIZE_DNN))
