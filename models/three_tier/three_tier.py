@@ -418,6 +418,7 @@ def sample_level_predictor(frame_level_outputs, prev_samples):
     return out
 
 sequences   = T.imatrix('sequences')
+noise       = T.imatrix('noise')
 h0          = T.tensor3('h0')
 big_h0      = T.tensor3('big_h0')
 reset       = T.iscalar('reset')
@@ -433,8 +434,8 @@ if args.debug:
     mask.tag.test_value = numpy.ones((BATCH_SIZE, SEQ_LEN+OVERLAP), dtype='float32')
 
 
-big_input_sequences = sequences[:, :-BIG_FRAME_SIZE]
-input_sequences = sequences[:, BIG_FRAME_SIZE-FRAME_SIZE:-FRAME_SIZE]
+big_input_sequences = noise[:, :-BIG_FRAME_SIZE]
+input_sequences = noise[:, BIG_FRAME_SIZE-FRAME_SIZE:-FRAME_SIZE]
 target_sequences = sequences[:, BIG_FRAME_SIZE:]
 
 target_mask = mask[:, BIG_FRAME_SIZE:]
@@ -443,7 +444,7 @@ big_frame_level_outputs, new_big_h0, big_frame_independent_preds = big_frame_lev
 
 frame_level_outputs, new_h0 = frame_level_rnn(input_sequences, big_frame_level_outputs, h0, reset)
 
-prev_samples = sequences[:, BIG_FRAME_SIZE-FRAME_SIZE_DNN:-1]
+prev_samples = noise[:, BIG_FRAME_SIZE-FRAME_SIZE_DNN:-1]
 prev_samples = prev_samples.reshape((1, BATCH_SIZE, 1, -1))
 prev_samples = theano.tensor.nnet.neighbours.images2neibs(prev_samples, (1, FRAME_SIZE_DNN), neib_step=(1, 1), mode='valid')
 prev_samples = prev_samples.reshape((BATCH_SIZE * SEQ_LEN, FRAME_SIZE_DNN))
@@ -525,21 +526,21 @@ updates = lasagne.updates.adam(grads, all_params)
 
 # Training function(s)
 ip_train_fn = theano.function(
-    [sequences, big_h0, reset, mask],
+    [sequences, big_h0, reset, mask, noise],
     [ip_cost, new_big_h0],
     updates=ip_updates,
     on_unused_input='warn'
 )
 
 other_train_fn = theano.function(
-    [sequences, big_h0, h0, reset, mask],
+    [sequences, big_h0, h0, reset, mask, noise],
     [cost, new_big_h0, new_h0],
     updates=other_updates,
     on_unused_input='warn'
 )
 
 train_fn = theano.function(
-    [sequences, big_h0, h0, reset, mask],
+    [sequences, big_h0, h0, reset, mask, noise],
     [cost, new_big_h0, new_h0],
     updates=updates,
     on_unused_input='warn'
@@ -547,19 +548,19 @@ train_fn = theano.function(
 
 # Validation and Test function, hence no updates
 ip_test_fn = theano.function(
-    [sequences, big_h0, reset, mask],
+    [sequences, big_h0, reset, mask, noise],
     [ip_cost, new_big_h0],
     on_unused_input='warn'
 )
 
 other_test_fn = theano.function(
-    [sequences, big_h0, h0, reset, mask],
+    [sequences, big_h0, h0, reset, mask, noise],
     [cost, new_big_h0, new_h0],
     on_unused_input='warn'
 )
 
 test_fn = theano.function(
-    [sequences, big_h0, h0, reset, mask],
+    [sequences, big_h0, h0, reset, mask, noise],
     [cost, new_big_h0, new_h0],
     on_unused_input='warn'
 )
@@ -622,13 +623,16 @@ def generate_and_save_samples(tag):
     LENGTH = N_SECS*BITRATE if not args.debug else 100
 
     samples = numpy.zeros((N_SEQS, LENGTH), dtype='int32')
+    samples_noise = numpy.zeros((N_SEQS, LENGTH), dtype='int32')
     if flag_dict['RMZERO']:
         testData_feeder = load_data(test_feeder)
         mini_batch = testData_feeder.next()
-        tmp, _, _ = mini_batch
+        tmp, _, _, _, seqs_noise = mini_batch
         samples[:, :BIG_FRAME_SIZE] = tmp[:N_SEQS, :BIG_FRAME_SIZE]
+        samples_noise[:, :BIG_FRAME_SIZE] = seqs_noise[:N_SEQS, :BIG_FRAME_SIZE]
     else:
         samples[:, :BIG_FRAME_SIZE] = Q_ZERO
+        samples_noise[:, :BIG_FRAME_SIZE] = Q_ZERO
 
     # First half zero, others fixed random at each checkpoint
     big_h0 = numpy.zeros(
@@ -649,14 +653,14 @@ def generate_and_save_samples(tag):
 
         if t % BIG_FRAME_SIZE == 0:
             big_frame_level_outputs, big_h0 = big_frame_level_generate_fn(
-                samples[:, t-BIG_FRAME_SIZE:t],
+                samples_noise[:, t-BIG_FRAME_SIZE:t],
                 big_h0,
                 numpy.int32(t == BIG_FRAME_SIZE)
             )
 
         if t % FRAME_SIZE == 0:
             frame_level_outputs, h0 = frame_level_generate_fn(
-                samples[:, t-FRAME_SIZE:t],
+                samples_noise[:, t-FRAME_SIZE:t],
                 big_frame_level_outputs[:, (t / FRAME_SIZE) % (BIG_FRAME_SIZE / FRAME_SIZE)],
                 h0,
                 numpy.int32(t == BIG_FRAME_SIZE)
@@ -664,7 +668,7 @@ def generate_and_save_samples(tag):
 
         samples[:, t] = sample_level_generate_fn(
             frame_level_outputs[:, t % FRAME_SIZE],
-            samples[:, t-FRAME_SIZE_DNN:t]
+            samples_noise[:, t-FRAME_SIZE_DNN:t]
         )
 
     total_time = time() - total_time
@@ -698,8 +702,8 @@ def monitor(data_feeder):
     _big_h0 = numpy.zeros((BATCH_SIZE, N_RNN, H0_MULT*BIG_DIM), dtype='float32')
     _costs = []
     _data_feeder = load_data(data_feeder)
-    for _seqs, _reset, _mask in _data_feeder:
-        _cost, _big_h0, _h0 = test_fn(_seqs, _big_h0, _h0, _reset, _mask)
+    for _seqs, _reset, _mask, _, _seqs_noise in _data_feeder:
+        _cost, _big_h0, _h0 = test_fn(_seqs, _big_h0, _h0, _reset, _mask, _seqs_noise)
         _costs.append(_cost)
 
     return numpy.mean(_costs), time() - _total_time
@@ -778,10 +782,10 @@ while True:
         end_of_batch = True
         print "[Another epoch]",
 
-    seqs, reset, mask = mini_batch
+    seqs, reset, mask, _, seqs_noise = mini_batch
 
     start_time = time()
-    cost, big_h0, h0 = train_fn(seqs, big_h0, h0, reset, mask)
+    cost, big_h0, h0 = train_fn(seqs, big_h0, h0, reset, mask, seqs_noise)
     total_time += time() - start_time
     #print "This cost:", cost, "This h0.mean()", h0.mean()
 
