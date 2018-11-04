@@ -512,7 +512,7 @@ def speech_train_feed_epoch(*args):
         # idx = random.randint(0, 9)
         idx = int(time.time())%10
         tmp = tmp.replace('train','train_'+str(idx))
-        tmp_noise = tmp.replace('train', 'train_' + str(idx))
+        tmp_noise = tmp_noise.replace('train', 'train_' + str(idx))
         tmp_lab = tmp_lab.replace('train','train_'+str(idx))
         print('')
         print('REMINDER: using split {} for training'.format(idx))
