@@ -627,7 +627,7 @@ def generate_and_save_samples(tag):
     if flag_dict['RMZERO']:
         testData_feeder = load_data(test_feeder)
         mini_batch = testData_feeder.next()
-        tmp, _, _, _, seqs_noise = mini_batch
+        tmp, _, _, seqs_noise = mini_batch
         samples[:, :BIG_FRAME_SIZE] = tmp[:N_SEQS, :BIG_FRAME_SIZE]
         samples_noise[:, :BIG_FRAME_SIZE] = seqs_noise[:N_SEQS, :BIG_FRAME_SIZE]
     else:
@@ -702,7 +702,7 @@ def monitor(data_feeder):
     _big_h0 = numpy.zeros((BATCH_SIZE, N_RNN, H0_MULT*BIG_DIM), dtype='float32')
     _costs = []
     _data_feeder = load_data(data_feeder)
-    for _seqs, _reset, _mask, _, _seqs_noise in _data_feeder:
+    for _seqs, _reset, _mask, _seqs_noise in _data_feeder:
         _cost, _big_h0, _h0 = test_fn(_seqs, _big_h0, _h0, _reset, _mask, _seqs_noise)
         _costs.append(_cost)
 
@@ -782,7 +782,7 @@ while True:
         end_of_batch = True
         print "[Another epoch]",
 
-    seqs, reset, mask, _, seqs_noise = mini_batch
+    seqs, reset, mask, seqs_noise = mini_batch
 
     start_time = time()
     cost, big_h0, h0 = train_fn(seqs, big_h0, h0, reset, mask, seqs_noise)
