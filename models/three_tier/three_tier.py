@@ -717,6 +717,7 @@ total_time = 0.
 last_print_time = 0.
 last_print_iters = 0
 costs = []
+test_cost = 0
 lowest_valid_cost = numpy.finfo(numpy.float32).max
 corresponding_test_cost = numpy.finfo(numpy.float32).max
 new_lowest_cost = False
@@ -801,6 +802,7 @@ while True:
         # 0. Validation
         print "\nValidation!",
         valid_cost, valid_time = monitor(valid_feeder)
+        print "Valid Cost = {}".format(valid_cost)
         print "Done!"
 
         # 1. Test
