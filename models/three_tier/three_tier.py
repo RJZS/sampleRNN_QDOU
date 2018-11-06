@@ -568,7 +568,7 @@ test_fn = theano.function(
 # Sampling at big frame level
 big_frame_level_generate_fn = theano.function(
     [noise, big_h0, reset],
-    big_frame_level_rnn(sequences, big_h0, reset)[0:2],
+    big_frame_level_rnn(noise, big_h0, reset)[0:2],
     on_unused_input='warn'
 )
 
@@ -576,7 +576,7 @@ big_frame_level_generate_fn = theano.function(
 big_frame_level_outputs = T.matrix('big_frame_level_outputs')
 frame_level_generate_fn = theano.function(
     [noise, big_frame_level_outputs, h0, reset],
-    frame_level_rnn(sequences, big_frame_level_outputs.dimshuffle(0,'x',1), h0, reset),
+    frame_level_rnn(noise, big_frame_level_outputs.dimshuffle(0,'x',1), h0, reset),
     on_unused_input='warn'
 )
 
