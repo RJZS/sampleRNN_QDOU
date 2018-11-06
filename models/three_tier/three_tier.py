@@ -567,7 +567,7 @@ test_fn = theano.function(
 
 # Sampling at big frame level
 big_frame_level_generate_fn = theano.function(
-    [sequences, big_h0, reset],
+    [noise, big_h0, reset],
     big_frame_level_rnn(sequences, big_h0, reset)[0:2],
     on_unused_input='warn'
 )
@@ -575,7 +575,7 @@ big_frame_level_generate_fn = theano.function(
 # Sampling at frame level
 big_frame_level_outputs = T.matrix('big_frame_level_outputs')
 frame_level_generate_fn = theano.function(
-    [sequences, big_frame_level_outputs, h0, reset],
+    [noise, big_frame_level_outputs, h0, reset],
     frame_level_rnn(sequences, big_frame_level_outputs.dimshuffle(0,'x',1), h0, reset),
     on_unused_input='warn'
 )
@@ -584,11 +584,11 @@ frame_level_generate_fn = theano.function(
 frame_level_outputs = T.matrix('frame_level_outputs')
 prev_samples        = T.imatrix('prev_samples')
 sample_level_generate_fn = theano.function(
-    [frame_level_outputs, prev_samples],
+    [frame_level_outputs, noise],
     lib.ops.softmax_and_sample(
         sample_level_predictor(
             frame_level_outputs,
-            prev_samples
+            noise
         )
     ),
     on_unused_input='warn'
