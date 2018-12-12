@@ -26,6 +26,8 @@ datasets/voicebank/
 *.sh.*
 scripts/*.txt
 
+.idea/
+
 #ipython notebook - should manuelly add important ones
 *.ipynb
 
