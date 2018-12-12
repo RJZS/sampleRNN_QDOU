@@ -129,7 +129,7 @@ PRINT_TIME = 60*60*24*3 # Print cost, generate samples, save model checkpoint ev
 STOP_TIME = 60*60*24*2 # Stop after this many seconds of actual training (not including time req'd to generate samples etc.)
 N_SEQS = 5  # Number of samples to generate every time monitoring.
 ###
-RESULTS_DIR = 'results_3t'
+RESULTS_DIR = '/home/dawna/tts/rjzs2/noise_results_3t'
 if WHICH_SET != 'SPEECH': RESULTS_DIR = os.path.join(RESULTS_DIR, WHICH_SET)
 
 ###

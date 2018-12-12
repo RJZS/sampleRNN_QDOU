@@ -9,6 +9,7 @@ scripts/asup
 scripts/bkup*
 scripts/autolog
 scripts/run_past
+scripts/run
 scripts/*.sh
 
 

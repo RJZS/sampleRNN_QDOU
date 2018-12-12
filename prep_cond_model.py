@@ -56,6 +56,6 @@ def mk_uncon_para_expand_3t_rdm(src_dirFile,tgt_dirFile,big_fr_sz=80,fr_sz=20,di
         pickle.dump(uncon_para_expand, f)
     return
 
-src_dirFile='results_3t/models-three_tier-three_tier.py-exptest_run-seq_len800-big_fr_sz80-fr_sz20-emb_sz256-skip_connF-dim1024-n_rnn2-rnn_typeGRU-q_levels256-q_typemu-law-bch_sz20-weight_normT-learn_h0T-n_big_rnn2-normed-utt-rmzero-acoustic/params/params_e9_i60000_t10.67_tr2.5328_v2.7849.pkl'
+src_dirFile='results_3t/models-three_tier-three_tier.py-expuncondition_noise-seq_len800-big_fr_sz80-fr_sz20-emb_sz256-skip_connF-dim1024-n_rnn2-rnn_typeGRU-q_levels256-q_typemu-law-bch_sz20-weight_normT-learn_h0T-n_big_rnn2-normed-utt-rmzero-acoustic/params/params_e9_i60000_t11.38_tr7.6896_v7.5518.pkl'
 tgt_dirFile='bkup/uc_expand_3t_test_run.pkl'
 mk_uncon_para_expand_3t_rdm(src_dirFile,tgt_dirFile,big_fr_sz=80,fr_sz=20,dim=1024,lab_dim=163,rdm_lv=1)
