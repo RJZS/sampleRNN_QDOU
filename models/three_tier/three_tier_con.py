@@ -123,7 +123,7 @@ BITRATE = 16000
 #TRAIN_MODE = 'time-iters'
 # To use PRINT_TIME for validation,
 # and (STOP_ITERS, STOP_TIME), whichever happened first, for stopping exp.
-TRAIN_MODE = 'iters-time'
+TRAIN_MODE = 'iters'
 # To use PRINT_ITERS for validation,
 # and (STOP_ITERS, STOP_TIME), whichever happened first, for stopping exp.
 PRINT_ITERS = 10000 # Print cost, generate samples, save model checkpoint every N iterations.
