@@ -32,9 +32,9 @@ ref_f = load_binary_file("{}/F0/ref_test_{}.lf0".format(ref_dir, num), fdim)
 noise_f = load_binary_file("{}/F0/{}_{}.lf0".format(noise_dir, noise_file, num), fdim)
 ar_f = load_binary_file("{}/F0/{}_{}.lf0".format(ar_dir, ar_file, num), fdim)
 
-ref_noise = load_binary_file("{}/Noise/ref_test_{}.bndap".format(ref_dir, num), fdim)
-noise_noise = load_binary_file("{}/Noise/{}_{}.bndap".format(noise_dir, noise_file, num), fdim)
-ar_noise = load_binary_file("{}/Noise/{}_{}.bndap".format(ar_dir, ar_file, num), fdim)
+ref_noise = load_binary_file("{}/Noise/ref_test_{}.bndap".format(ref_dir, num), noisedim)
+noise_noise = load_binary_file("{}/Noise/{}_{}.bndap".format(noise_dir, noise_file, num), noisedim)
+ar_noise = load_binary_file("{}/Noise/{}_{}.bndap".format(ar_dir, ar_file, num), noisedim)
 
 noise_spec = noise_spec[:-2]
 ref_spec = ref_spec[:-2]
