@@ -80,7 +80,7 @@ if FLAG_NORMED_ALRDY:
     if WHICH_SET == 'SPEECH':
         if FLAG_NORMED_UTT:
             __speech_file = 'speech/ln_MA_f32_CE_8s_norm_utt/speech_{}.npy'  # normed on utt level: zero mean, increased volume
-            __speech_file_noise = 'speech/ln_MA_f32_CE_8s_norm_utt/speech_{}_noise.npy'
+            __speech_file_noise = 'speech/ln_MA_f32_CE_8s_norm_utt/speech_{}_noise_1.npy'
         else:
             __speech_file = 'speech/manuCutAlign_f32_norm_rmDC/speech_{}.npy'  # normed on cps level: zero mean
             __speech_file_noise = 'speech/manuCutAlign_f32_norm_rmDC/speech_{}_noise.npy'
@@ -578,6 +578,10 @@ def speech_test_feed_epoch(*args):
     files = numpy.load(data_path)
     data_path = find_dataset(__test(__speech_file_noise))
     files_noise = numpy.load(data_path)
+    print('')
+    print('Noise data path')
+    print(data_path)
+    print('')
     data_path = find_dataset(__test(__speech_file_lab))
     files_lab = numpy.load(data_path)
     generator = __speech_feed_epoch(files, files_lab, files_noise, *args)
