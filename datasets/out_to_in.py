@@ -20,4 +20,4 @@ for utt in range(5):
         print("Could not find utterance {}. Skipping...".format(utt))
         continue
 
-np.save('{}/speech_test_1.npy'.format(out_dir))
+np.save('{}/speech_test_1.npy'.format(out_dir), noise)
