@@ -9,11 +9,15 @@ out_dir = 'speech/ln_MA_f32_CE_8s_norm_utt'
 
 noise = np.load('{}/speech_test.npy'.format(out_dir))  # Noise to (partially) overwrite.
 for utt in range(5):
-    fs, audio = wavfile.read('{}/{}_{}.wav'.format(wav_dir, wav_file_root, utt))
-    audio = (audio / np.amax(np.abs(audio))) + 1
-    audio = (audio * 255) / 2
-    audio = np.round(audio)
-    audio = audio.astype(np.int32)
-    noise[utt, :len(audio)] = audio
+    try:
+        fs, audio = wavfile.read('{}/{}_{}.wav'.format(wav_dir, wav_file_root, utt))
+        audio = (audio / np.amax(np.abs(audio))) + 1
+        audio = (audio * 255) / 2
+        audio = np.round(audio)
+        audio = audio.astype(np.int32)
+        noise[utt, :len(audio)] = audio
+    except IOError:
+        print("Could not find utterance {}. Skipping...".format(utt))
+        continue
 
 np.save('{}/speech_test_1.npy'.format(out_dir))
