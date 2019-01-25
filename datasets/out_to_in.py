@@ -5,8 +5,15 @@ from scipy.io import wavfile
 wav_dir = '/home/dawna/tts/rjzs2/noise_results_3t/c_noise_random_start'
 wav_file_root = 'sample_e31_i200000_t39.03_tr6.8481_v6.5334'
 
+out_dir = 'speech/ln_MA_f32_CE_8s_norm_utt'
+
+noise = np.load('{}/speech_test.npy'.format(out_dir))  # Noise to (partially) overwrite.
 for utt in range(5):
     fs, audio = wavfile.read('{}/{}_{}.wav'.format(wav_dir, wav_file_root, utt))
-    print(np.mean(audio))
-    print(np.max(audio))
-    print(np.min(audio))
+    audio = (audio / np.amax(np.abs(audio))) + 1
+    audio = (audio * 255) / 2
+    audio = np.round(audio)
+    audio = audio.astype(np.int32)
+    noise[utt, :len(audio)] = audio
+
+np.save('{}/speech_test_1.npy'.format(out_dir))
