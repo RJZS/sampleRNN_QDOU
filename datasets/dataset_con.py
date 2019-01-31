@@ -80,7 +80,7 @@ if FLAG_NORMED_ALRDY:
     if WHICH_SET == 'SPEECH':
         if FLAG_NORMED_UTT:
             __speech_file = 'speech/ln_MA_f32_CE_8s_norm_utt/speech_{}.npy'  # normed on utt level: zero mean, increased volume
-            __speech_file_noise = 'speech/ln_MA_f32_CE_8s_norm_utt/speech_{}_noise_1.npy'
+            __speech_file_noise = 'speech/ln_MA_f32_CE_8s_norm_utt/speech_{}_noise_2.npy'
         else:
             __speech_file = 'speech/manuCutAlign_f32_norm_rmDC/speech_{}.npy'  # normed on cps level: zero mean
             __speech_file_noise = 'speech/manuCutAlign_f32_norm_rmDC/speech_{}_noise.npy'
