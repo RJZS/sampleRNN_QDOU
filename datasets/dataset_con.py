@@ -98,6 +98,11 @@ if FLAG_NORMED_ALRDY:
         __speech_file_lab = 'speech/ln_16k_resil_Lesley_lab_norm/speech_{}_lab.npy'  # lesley data
         if flag_dict['ACOUSTIC']:
             __speech_file_lab = 'speech/BLSTM_resil_Lesley_traj_full/speech_{}_traj.npy'  # lesley data
+    if WHICH_SET == 'NANCY':
+        __speech_file = 'nancy/MA_8s_norm/{}.npy'  # lesley data
+        # __speech_file_lab = 'speech/ln_16k_resil_Lesley_lab_norm/speech_{}_lab.npy'  # lesley data
+        if flag_dict['ACOUSTIC']:
+            __speech_file_lab = 'nancy/MA_8s_norm/{}_trj.npy'  # lesley data
 else:
     if WHICH_SET == 'SPEECH': # Speech means NICK set.
         __speech_file = 'speech/manuAlign_float32_cutEnd/speech_{}.npy'  # in float16 8secs*16000samples/sec
@@ -123,8 +128,8 @@ import sys
 sys.path.append('/home/dawna/tts/qd212/lib_QDOU')
 from HRNN import get_file_lab_str
 
-if WHICH_SET in ['NANCY','VCBK']:
-    __speech_file,__speech_file_lab = get_file_lab_str(flag_dict,WHICH_SET)
+# if WHICH_SET in ['NANCY','VCBK']:
+#    __speech_file,__speech_file_lab = get_file_lab_str(flag_dict,WHICH_SET)
     
 # print 'dir for wav and lab:'
 # print __speech_file
