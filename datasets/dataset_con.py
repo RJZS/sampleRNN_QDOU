@@ -81,6 +81,7 @@ if FLAG_NORMED_ALRDY:
         if FLAG_NORMED_UTT:
             __speech_file = 'speech/ln_MA_f32_CE_8s_norm_utt/speech_{}.npy'  # normed on utt level: zero mean, increased volume
             __speech_file_noise = 'speech/ln_MA_f32_CE_8s_norm_utt/speech_{}_noise.npy'
+
         else:
             __speech_file = 'speech/manuCutAlign_f32_norm_rmDC/speech_{}.npy'  # normed on cps level: zero mean
             __speech_file_noise = 'speech/manuCutAlign_f32_norm_rmDC/speech_{}_noise.npy'
@@ -100,6 +101,7 @@ if FLAG_NORMED_ALRDY:
             __speech_file_lab = 'speech/BLSTM_resil_Lesley_traj_full/speech_{}_traj.npy'  # lesley data
     if WHICH_SET == 'NANCY':
         __speech_file = 'nancy/MA_8s_norm/{}.npy'  # lesley data
+        __speech_file_noise = 'nancy/MA_8s_norm/{}_noise.npy'
         # __speech_file_lab = 'speech/ln_16k_resil_Lesley_lab_norm/speech_{}_lab.npy'  # lesley data
         if flag_dict['ACOUSTIC']:
             __speech_file_lab = 'nancy/MA_8s_norm/{}_trj.npy'  # lesley data
