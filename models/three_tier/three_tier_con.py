@@ -786,9 +786,8 @@ def generate_and_save_samples(tag):
     log = log.format(N_SEQS, N_SECS, total_time)
     print log,
 
-    samp = frame_out[i]
-    name = "sample_{}".format(tag, i)
-    numpy.save(os.path.join(SAMPLES_PATH, name), samp)
+    name = "sample_{}".format(tag)
+    numpy.save(os.path.join(SAMPLES_PATH, name), frame_out)
 
     # for i in xrange(N_SEQS):
     #     samp = samples[i]
