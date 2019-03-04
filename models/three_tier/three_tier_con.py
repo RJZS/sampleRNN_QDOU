@@ -135,10 +135,7 @@ RESULTS_DIR = '/home/dawna/tts/rjzs2/noise_results_3t'
 if WHICH_SET != 'SPEECH': RESULTS_DIR = os.path.join(RESULTS_DIR, WHICH_SET)
     
 if FLAG_GEN:
-    # N_SEQS = 10
-    # N_SECS = 8 #LENGTH = 8*BITRATE #640*80
-    N_SEQS = 72 #60
-    # N_SECS = 8 #LENGTH = 8*BITRATE #640*80
+    N_SEQS = BATCH_SIZE # This needs to be the case for the program to work.
     RESULTS_DIR = os.path.join(RESULTS_DIR,'gen')
 
 FOLDER_PREFIX = os.path.join(RESULTS_DIR, tag)
