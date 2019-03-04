@@ -752,7 +752,7 @@ def generate_and_save_samples(tag):
     # Do this for training and debugging.
     # As the RNN needs initial state.
     # Once model is good enough, actually use 20 frames.
-    frame_out = numpy.zeros((LENGTH,DIM))
+    frame_out = numpy.zeros((N_SEQS, LENGTH,DIM))
     for t in xrange(BIG_FRAME_SIZE, LENGTH): # for loop going sample by sample
 
         if t % BIG_FRAME_SIZE == 0:
@@ -778,7 +778,7 @@ def generate_and_save_samples(tag):
                 h0,
                 numpy.int32(t == BIG_FRAME_SIZE)
             )
-            frame_out[t:t+FRAME_SIZE-1, :] = frame_level_outputs
+            frame_out[:, t:t+FRAME_SIZE, :] = frame_level_outputs
 
 
     total_time = time() - total_time
@@ -786,10 +786,9 @@ def generate_and_save_samples(tag):
     log = log.format(N_SEQS, N_SECS, total_time)
     print log,
 
-    for i in xrange(N_SEQS):
-        samp = frame_out[i]
-        name = "sample_{}_{}".format(tag, i)
-        numpy.save(os.path.join(SAMPLES_PATH, name), samp)
+    samp = frame_out[i]
+    name = "sample_{}".format(tag, i)
+    numpy.save(os.path.join(SAMPLES_PATH, name), samp)
 
     # for i in xrange(N_SEQS):
     #     samp = samples[i]
