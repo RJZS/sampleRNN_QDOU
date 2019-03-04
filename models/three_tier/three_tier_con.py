@@ -781,24 +781,24 @@ def generate_and_save_samples(tag):
                 numpy.int32(t == BIG_FRAME_SIZE)
             )
 
-        samples[:, t] = sample_level_generate_fn(
-            frame_level_outputs[:, t % FRAME_SIZE],
-            samples_noise[:, t-FRAME_SIZE_DNN:t]
-        )
-
     total_time = time() - total_time
     log = "{} samples of {} seconds length generated in {} seconds."
     log = log.format(N_SEQS, N_SECS, total_time)
     print log,
 
     for i in xrange(N_SEQS):
-        samp = samples[i]
-        if Q_TYPE == 'mu-law':
-            from datasets.dataset import mu2linear
-            samp = mu2linear(samp)
-        elif Q_TYPE == 'a-law':
-            raise NotImplementedError('a-law is not implemented')
-        write_audio_file("sample_{}_{}".format(tag, i), samp)
+        samp = frame_level_outputs[i]
+        name = "sample_{}_{}".format(tag, i)
+        numpy.save(os.path.join(SAMPLES_PATH, name + '.wav'), samp)
+
+    # for i in xrange(N_SEQS):
+    #     samp = samples[i]
+    #     if Q_TYPE == 'mu-law':
+    #         from datasets.dataset import mu2linear
+    #         samp = mu2linear(samp)
+    #     elif Q_TYPE == 'a-law':
+    #         raise NotImplementedError('a-law is not implemented')
+    #     write_audio_file("sample_{}_{}".format(tag, i), samp)
 
 def monitor(data_feeder):
     """
