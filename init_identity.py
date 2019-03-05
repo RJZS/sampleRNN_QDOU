@@ -4,10 +4,10 @@ import pickle
 bfs = 80  # Big frame size
 fs = 20  # Frame size
 h = 1024  # Length of hidden state
-c = 0.1
+c = 1
 
 example_pkl_file = 'bkup/c_noise_random_start.pkl'  # Use this file to get keys of dictionary and dimensions of each matrix.
-save_file = 'bkup/identity_transform.pkl'
+save_file = 'bkup/identity_transform_nog_c1.pkl'
 with open(example_pkl_file, 'rb') as f:
     t = pickle.load(f)  # Parameters are of type 'float32'.
 
@@ -48,12 +48,13 @@ t = concat_top_left_ci(t, 'BigFrameLevel.GRU2.Step.Input', bfs, c, 2*h)
 t = concat_top_left_ci(t, 'FrameLevel.GRU1.Step.Input', fs, c, 2*h)
 t = concat_top_left_ci(t, 'FrameLevel.GRU2.Step.Input', fs, c, 2*h)
 
-t = top_left_ci(t, 'FrameLevel.Output', c, fs)
-
+t = split_top_left_ci(t, 'FrameLevel.Output', 1, c, h, fs)
 t = split_top_left_ci(t, 'BigFrameLevel.Output', fs, c, h, int(bfs/fs))
 
 for key in t.keys():
     t[key] = np.array(t[key]).astype('float32')
+    if key.endswith('.g0'):
+	t.pop(key)
 
 print("Saving to file...")
 with open(save_file, 'wb') as handle:
