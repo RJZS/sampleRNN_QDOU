@@ -793,12 +793,16 @@ def generate_and_save_samples(tag):
 
     for i in xrange(N_SEQS):
         samp = samples[i]
+        name = "sample_{}".format(tag)
+        numpy.save(os.path.join(SAMPLES_PATH, name), samp)
         if Q_TYPE == 'mu-law':
             from datasets.dataset import mu2linear
             samp = mu2linear(samp)
         elif Q_TYPE == 'a-law':
             raise NotImplementedError('a-law is not implemented')
-        write_audio_file("sample_{}_{}".format(tag, i), samp)
+        # write_audio_file("sample_{}_{}".format(tag, i), samp)
+        name = "sample_{}_q".format(tag)
+        numpy.save(os.path.join(SAMPLES_PATH, name), samp)
 
 def monitor(data_feeder):
     """
