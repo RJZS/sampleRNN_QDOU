@@ -347,7 +347,7 @@ def __GRUStep(
             hidden_dim,
             2 * hidden_dim,
             last_hidden,
-            biases=False,
+            biases=True,
             weightnorm=weightnorm
         ) + processed_input[:, :2*hidden_dim]
     )
