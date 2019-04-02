@@ -6,15 +6,16 @@ fs = 20  # Frame size
 h = 1024  # Length of hidden state
 c = 1
 
-example_pkl_file = 'bkup/c_noise_random_start.pkl'  # Use this file to get keys of dictionary and dimensions of each matrix.
-save_file = 'bkup/identity_transform_nog_c1.pkl'
+example_pkl_file = 'bkup/identity_transform.pkl'  # Use this file to get keys of dictionary and dimensions of each matrix.
+save_file = 'bkup/identity_transform_nog_c1_b.pkl'
 with open(example_pkl_file, 'rb') as f:
-    t = pickle.load(f)  # Parameters are of type 'float32'.
+    s = pickle.load(f)  # Parameters are of type 'float32'.
 
 print("Loaded file!")
 
-for key in t.keys():
-    t[key] = np.zeros(t[key].shape)
+t = {}
+for key in s.keys():
+    t[key] = np.zeros(s[key].shape)
 
 
 def top_left_ci(t, key, c, n):
@@ -50,6 +51,13 @@ t = concat_top_left_ci(t, 'FrameLevel.GRU2.Step.Input', fs, c, 2*h)
 
 t = split_top_left_ci(t, 'FrameLevel.Output', 1, c, h, fs)
 t = split_top_left_ci(t, 'BigFrameLevel.Output', fs, c, h, int(bfs/fs))
+
+bias = np.zeros(2*h)
+bias[:h] = 4
+t['BigFrameLevel.GRU1.Step.Recurrent_Gates.b'] = bias
+t['BigFrameLevel.GRU2.Step.Recurrent_Gates.b'] = bias
+t['FrameLevel.GRU1.Step.Recurrent_Gates.b'] = bias
+t['FrameLevel.GRU2.Step.Recurrent_Gates.b'] = bias
 
 for key in t.keys():
     t[key] = np.array(t[key]).astype('float32')
