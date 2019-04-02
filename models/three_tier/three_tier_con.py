@@ -137,7 +137,7 @@ if WHICH_SET != 'SPEECH': RESULTS_DIR = os.path.join(RESULTS_DIR, WHICH_SET)
 if FLAG_GEN:
     # N_SEQS = 10
     # N_SECS = 8 #LENGTH = 8*BITRATE #640*80
-    N_SEQS = 72 #60
+    N_SEQS = BATCH_SIZE #60
     # N_SECS = 8 #LENGTH = 8*BITRATE #640*80
     RESULTS_DIR = os.path.join(RESULTS_DIR,'gen')
 
