@@ -703,9 +703,9 @@ def generate_and_save_samples(tag):
         data *= 32768
         data = data.astype('int16')
         scipy.io.wavfile.write(
-                    os.path.join(SAMPLES_PATH, name+'.wav'),
-                    BITRATE,
-                    data)
+            os.path.join(SAMPLES_PATH, name+'.wav'),
+            BITRATE,
+            data)
 
     total_time = time()
     # Generate N_SEQS' sample files, each 5 seconds long
@@ -726,25 +726,25 @@ def generate_and_save_samples(tag):
     mini_batch = testData_feeder.next()
     tmp, _, _, seqs_lab, seqs_noise = mini_batch
     samples_lab = seqs_lab[:N_SEQS]
-    
+
     if flag_dict['RMZERO']:
         samples[:, :BIG_FRAME_SIZE] = tmp[:N_SEQS, :BIG_FRAME_SIZE]
         samples_noise[:, :BIG_FRAME_SIZE] = seqs_noise[:N_SEQS, :BIG_FRAME_SIZE]
     else:
         samples[:, :BIG_FRAME_SIZE] = Q_ZERO
         samples_noise[:, :BIG_FRAME_SIZE] = Q_ZERO
-    
+
     samples_lab_big = get_lab_big(samples_lab)
-    
+
     # First half zero, others fixed random at each checkpoint
     big_h0 = numpy.zeros(
-            (N_SEQS, N_BIG_RNN, H0_MULT*BIG_DIM),
-            dtype='float32'
+        (N_SEQS, N_BIG_RNN, H0_MULT*BIG_DIM),
+        dtype='float32'
     )
 
     h0 = numpy.zeros(
-            (N_SEQS, N_RNN, H0_MULT*DIM),
-            dtype='float32'
+        (N_SEQS, N_RNN, H0_MULT*DIM),
+        dtype='float32'
     )
 
     big_frame_level_outputs = None
@@ -760,7 +760,7 @@ def generate_and_save_samples(tag):
         if t % BIG_FRAME_SIZE == 0:
             tmp = samples_lab_big[:,(t-BIG_FRAME_SIZE)//BIG_FRAME_SIZE,:]
             tmp = tmp.reshape(tmp.shape[0],1,tmp.shape[1])
-            
+
             big_frame_level_outputs, big_h0 = big_frame_level_generate_fn(
                 samples_noise[:, t-BIG_FRAME_SIZE:t],
                 tmp,
@@ -772,7 +772,7 @@ def generate_and_save_samples(tag):
             tmp = samples_lab[:,(t-BIG_FRAME_SIZE)//FRAME_SIZE,:]
             # tmp = samples_lab[:,(t-FRAME_SIZE)//FRAME_SIZE,:] #classic, but might introduce a slight mis-alignment
             tmp = tmp.reshape(tmp.shape[0],1,tmp.shape[1])
-            
+
             frame_level_outputs, h0 = frame_level_generate_fn(
                 samples_noise[:, t-FRAME_SIZE:t],
                 tmp,
@@ -791,18 +791,23 @@ def generate_and_save_samples(tag):
     log = log.format(N_SEQS, N_SECS, total_time)
     print log,
 
+    samps = np.zeros((N_SEQS, LENGTH))
+    samps_q = np.zeros((N_SEQS, LENGTH))
     for i in xrange(N_SEQS):
         samp = samples[i]
-        name = "sample_{}".format(tag)
-        numpy.save(os.path.join(SAMPLES_PATH, name), samp)
+        samps[i,:] = samp
         if Q_TYPE == 'mu-law':
             from datasets.dataset import mu2linear
             samp = mu2linear(samp)
         elif Q_TYPE == 'a-law':
             raise NotImplementedError('a-law is not implemented')
+        samps_q[i, :] = samp
         # write_audio_file("sample_{}_{}".format(tag, i), samp)
-        name = "sample_{}_q".format(tag)
-        numpy.save(os.path.join(SAMPLES_PATH, name), samp)
+
+    name = "samples_{}".format(tag)
+    numpy.save(os.path.join(SAMPLES_PATH, name), samps)
+    name = "samples_{}_q".format(tag)
+    numpy.save(os.path.join(SAMPLES_PATH, name), samps_q)
 
 def monitor(data_feeder):
     """
