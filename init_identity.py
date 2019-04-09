@@ -56,6 +56,14 @@ def init_lecun(t, key, inp_dim, output_dim):
     return t
 
 
+def init_embedding(t, key, q_levels, emb_size):
+    t[key] = np.random.randn(
+            q_levels,
+            emb_size
+        ).astype('float32')
+
+    return t
+
 def uniform(stdev, size):
     """
     uniform distribution with the given stdev and size
@@ -83,7 +91,7 @@ t = init_he(t, 'SampleLevel.L2', h, h)
 t = init_he(t, 'SampleLevel.L3', h, h)
 
 t = init_lecun(t, 'SampleLevel.Output', h, q_levels)
-t = init_lecun(t, 'SampleLevel.Embedding', q_levels, emb_size)
+t = init_embedding(t, 'SampleLevel.Embedding', q_levels, emb_size)
 
 bias = np.zeros(2*h)
 bias[:h] = 4
