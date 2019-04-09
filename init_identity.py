@@ -1,6 +1,5 @@
 import numpy as np
 import pickle
-import theano
 
 bfs = 80  # Big frame size
 fs = 20  # Frame size
@@ -10,7 +9,7 @@ emb_size = 256  # Defiend in run script(.sh script to run job)
 c = 1
 
 example_pkl_file = 'bkup/identity_transform.pkl'  # Use this file to get keys of dictionary and dimensions of each matrix.
-save_file = 'bkup/identity_transform_nog_c1_b.pkl'
+save_file = 'bkup/identity_and_dnn.pkl'
 with open(example_pkl_file, 'rb') as f:
     s = pickle.load(f)  # Parameters are of type 'float32'.
 
@@ -68,7 +67,7 @@ def uniform(stdev, size):
         low=-stdev * np.sqrt(3),
         high=stdev * np.sqrt(3),
         size=size
-    ).astype(theano.config.floatX)
+    ).astype('float32')
 
 t = concat_top_left_ci(t, 'BigFrameLevel.GRU1.Step.Input', bfs, c, 2*h)
 t = concat_top_left_ci(t, 'BigFrameLevel.GRU2.Step.Input', bfs, c, 2*h)
