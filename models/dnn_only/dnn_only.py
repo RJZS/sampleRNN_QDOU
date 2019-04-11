@@ -556,15 +556,6 @@ cost = cost / target_mask.sum()
 # log_2(e) = 1.44269504089
 cost = cost * lib.floatX(numpy.log2(numpy.e))
 
-ip_cost = lib.floatX(numpy.log2(numpy.e)) * T.nnet.categorical_crossentropy(
-    T.nnet.softmax(big_frame_independent_preds.reshape((-1, Q_LEVELS))),
-    target_sequences.flatten()
-)
-ip_cost = ip_cost.reshape(target_sequences.shape)
-ip_cost = ip_cost * target_mask
-ip_cost = ip_cost.sum()
-ip_cost = ip_cost / target_mask.sum()
-
 ### Getting the params, grads, updates, and Theano functions ###
 #params = lib.get_params(cost, lambda x: hasattr(x, 'param') and x.param==True)
 #ip_params = lib.get_params(ip_cost, lambda x: hasattr(x, 'param') and x.param==True\
@@ -580,16 +571,10 @@ ip_cost = ip_cost / target_mask.sum()
 
 ###########
 all_params = lib.get_params(cost, lambda x: hasattr(x, 'param') and x.param==True)
-ip_params = lib.get_params(ip_cost, lambda x: hasattr(x, 'param') and x.param==True\
-    and 'BigFrameLevel' in x.name)
-other_params = [p for p in all_params if p not in ip_params]
-all_params = ip_params + other_params
-lib.print_params_info(ip_params, path=FOLDER_PREFIX)
+other_params = [p for p in all_params]
+all_params = other_params
 lib.print_params_info(other_params, path=FOLDER_PREFIX)
 lib.print_params_info(all_params, path=FOLDER_PREFIX)
-
-ip_grads = T.grad(ip_cost, wrt=ip_params, disconnected_inputs='warn')
-ip_grads = [T.clip(g, lib.floatX(-GRAD_CLIP), lib.floatX(GRAD_CLIP)) for g in ip_grads]
 
 other_grads = T.grad(cost, wrt=other_params, disconnected_inputs='warn')
 other_grads = [T.clip(g, lib.floatX(-GRAD_CLIP), lib.floatX(GRAD_CLIP)) for g in other_grads]
@@ -601,21 +586,12 @@ grads = [T.clip(g, lib.floatX(-GRAD_CLIP), lib.floatX(GRAD_CLIP)) for g in grads
 #pdb.set_trace()
 #---debug---
 
-ip_updates = lasagne.updates.adam(ip_grads, ip_params)
 other_updates = lasagne.updates.adam(other_grads, other_params)
 updates = lasagne.updates.adam(grads, all_params)
 
 print('----got to fn---')
 # Training function(s)
 """
-ip_train_fn = theano.function(
-    #[sequences, sequences_lab, sequences_lab_big, big_h0, reset, mask],
-    [sequences, sequences_lab_big, big_h0, reset, mask],
-    [ip_cost, new_big_h0],
-    updates=ip_updates,
-    on_unused_input='warn'
-)
-
 other_train_fn = theano.function(
     [sequences, sequences_lab, sequences_lab_big, big_h0, h0, reset, mask],
     [cost, new_big_h0, new_h0],
@@ -632,13 +608,6 @@ train_fn = theano.function(
 
 # Validation and Test function, hence no updates
 """
-ip_test_fn = theano.function(
-    #[sequences, sequences_lab, sequences_lab_big, big_h0, reset, mask],
-    [sequences, sequences_lab_big, big_h0, reset, mask],
-    [ip_cost, new_big_h0],
-    on_unused_input='warn'
-)
-
 other_test_fn = theano.function(
     [sequences, sequences_lab, sequences_lab_big, big_h0, h0, reset, mask],
     [cost, new_big_h0, new_h0],
