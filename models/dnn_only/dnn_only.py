@@ -240,177 +240,6 @@ def load_data_gen(data_feeder,SEQ_LEN_gen):
                        Q_TYPE)
 print('----got to def---')
 ### Creating computation graph ###
-# Remove input_sequences. Keep input_sequences_lab_big as this is the conditioning vector (lab = labels)
-def big_frame_level_rnn(input_sequences, input_sequences_lab_big, h0, reset):
-    """
-    input_sequences.shape: (batch size, n big frames * BIG_FRAME_SIZE)
-    h0.shape:              (batch size, N_BIG_RNN, BIG_DIM)
-    reset.shape:           ()
-    output[0].shape:       (batch size, n frames, DIM)
-    output[1].shape:       same as h0.shape
-    output[2].shape:       (batch size, seq len, Q_LEVELS)
-    """
-    frames = input_sequences.reshape((
-        input_sequences.shape[0],
-        input_sequences.shape[1] // BIG_FRAME_SIZE,
-        BIG_FRAME_SIZE
-    ))
-
-    if FLAG_QUANTLAB:
-        frames = T.concatenate([frames, input_sequences_lab_big], axis=2)
-        # Rescale frames from ints in [0, Q_LEVELS) to floats in [-2, 2]
-        # (a reasonable range to pass as inputs to the RNN)
-        frames = (frames.astype('float32') / lib.floatX(Q_LEVELS/2)) - lib.floatX(1)
-        frames *= lib.floatX(2)
-    else:
-        input_sequences_lab_big *= lib.floatX(2) # 0< data <2
-        input_sequences_lab_big -= lib.floatX(1) # -1< data <1
-        input_sequences_lab_big *= lib.floatX(2) # -2< data <2
-
-        frames = (frames.astype('float32') / lib.floatX(Q_LEVELS/2)) - lib.floatX(1)
-        frames *= lib.floatX(2)
-        frames = T.concatenate([frames, input_sequences_lab_big], axis=2)
-
-    # Handling RNN_TYPE
-    # Handling SKIP_CONN
-    #---debug---
-    #pdb.set_trace()
-    #---debug---
-    if RNN_TYPE == 'GRU':
-        rnns_out, last_hidden = lib.ops.stackedGRU('BigFrameLevel.GRU',
-                                                   N_BIG_RNN,
-                                                   BIG_FRAME_SIZE+LAB_DIM,
-                                                   BIG_DIM,
-                                                   frames,
-                                                   h0=h0,
-                                                   weightnorm=WEIGHT_NORM,
-                                                   skip_conn=SKIP_CONN)
-    elif RNN_TYPE == 'LSTM':
-        rnns_out, last_hidden = lib.ops.stackedLSTM('BigFrameLevel.LSTM',
-                                                    N_BIG_RNN,
-                                                    BIG_FRAME_SIZE+LAB_DIM,
-                                                    BIG_DIM,
-                                                    frames,
-                                                    h0=h0,
-                                                    weightnorm=WEIGHT_NORM,
-                                                    skip_conn=SKIP_CONN)
-
-    output = lib.ops.Linear(
-        'BigFrameLevel.Output',
-        BIG_DIM,
-        DIM * BIG_FRAME_SIZE / FRAME_SIZE,
-        rnns_out,
-        initialization='he',
-        weightnorm=WEIGHT_NORM
-    )
-    output = output.reshape((output.shape[0], output.shape[1] * BIG_FRAME_SIZE / FRAME_SIZE, DIM))
-
-    independent_preds = lib.ops.Linear(
-        'BigFrameLevel.IndependentPreds',
-        BIG_DIM,
-        Q_LEVELS * BIG_FRAME_SIZE,
-        rnns_out,
-        initialization='he',
-        weightnorm=WEIGHT_NORM
-    )
-    independent_preds = independent_preds.reshape((independent_preds.shape[0], independent_preds.shape[1] * BIG_FRAME_SIZE, Q_LEVELS))
-
-    return (output, last_hidden, independent_preds)
-
-# Want to remove input_sequences from this and all other layers. Conditioning on past samples.
-def frame_level_rnn(input_sequences, input_sequences_lab, other_input, h0, reset):
-    """
-    input_sequences.shape: (batch size, n frames * FRAME_SIZE)
-    other_input.shape:     (batch size, n frames, DIM)
-    h0.shape:              (batch size, N_RNN, DIM)
-    reset.shape:           ()
-    output.shape:          (batch size, n frames * FRAME_SIZE, DIM)
-    """
-    frames = input_sequences.reshape((
-        input_sequences.shape[0],
-        input_sequences.shape[1] // FRAME_SIZE,
-        FRAME_SIZE
-    ))
-
-    # Rescale frames from ints in [0, Q_LEVELS) to floats in [-2, 2]
-    # (a reasonable range to pass as inputs to the RNN)
-    frames = (frames.astype('float32') / lib.floatX(Q_LEVELS/2)) - lib.floatX(1)
-    frames *= lib.floatX(2)
-
-    if FLAG_QUANTLAB:
-        frames = T.concatenate([frames, input_sequences_lab], axis=2)
-
-        # Rescale frames from ints in [0, Q_LEVELS) to floats in [-2, 2]
-        # (a reasonable range to pass as inputs to the RNN)
-        frames = (frames.astype('float32') / lib.floatX(Q_LEVELS/2)) - lib.floatX(1)
-        frames *= lib.floatX(2)
-
-    else:
-        input_sequences_lab *= lib.floatX(2) # 0< data <2
-        input_sequences_lab -= lib.floatX(1) # -1< data <1
-        input_sequences_lab *= lib.floatX(2) # -2< data <2
-
-        frames = (frames.astype('float32') / lib.floatX(Q_LEVELS/2)) - lib.floatX(1)
-        frames *= lib.floatX(2)
-
-        # Concatenating samples with conditioning vectors. just set frames = input_sequences_lab.
-        frames = T.concatenate([frames, input_sequences_lab], axis=2)
-        # Try this: frames = input_sequences_lab
-
-    gru_input = lib.ops.Linear(
-        'FrameLevel.InputExpand',
-        FRAME_SIZE+LAB_DIM,
-        DIM,
-        frames,
-        initialization='he',
-        weightnorm=WEIGHT_NORM,
-        ) + other_input
-
-    # Initial state of RNNs
-    learned_h0 = lib.param(
-        'FrameLevel.h0',
-        numpy.zeros((N_RNN, H0_MULT*DIM), dtype=theano.config.floatX)
-    )
-    # Handling LEARN_H0
-    learned_h0.param = LEARN_H0
-    learned_h0 = T.alloc(learned_h0, h0.shape[0], N_RNN, H0_MULT*DIM)
-    learned_h0 = T.unbroadcast(learned_h0, 0, 1, 2)
-    #learned_h0 = T.patternbroadcast(learned_h0, [False] * learned_h0.ndim)
-    h0 = theano.ifelse.ifelse(reset, learned_h0, h0)
-
-    # Handling RNN_TYPE
-    # Handling SKIP_CONN
-    if RNN_TYPE == 'GRU':
-        # N_RNN is number of layers.
-        rnns_out, last_hidden = lib.ops.stackedGRU('FrameLevel.GRU',
-                                                   N_RNN,
-                                                   DIM,
-                                                   DIM,
-                                                   gru_input,
-                                                   h0=h0,
-                                                   weightnorm=WEIGHT_NORM,
-                                                   skip_conn=SKIP_CONN)
-    elif RNN_TYPE == 'LSTM':
-        rnns_out, last_hidden = lib.ops.stackedLSTM('FrameLevel.LSTM',
-                                                    N_RNN,
-                                                    DIM,
-                                                    DIM,
-                                                    gru_input,
-                                                    h0=h0,
-                                                    weightnorm=WEIGHT_NORM,
-                                                    skip_conn=SKIP_CONN)
-
-    output = lib.ops.Linear(
-        'FrameLevel.Output',
-        DIM,
-        FRAME_SIZE * DIM,
-        rnns_out,
-        initialization='he',
-        weightnorm=WEIGHT_NORM
-    )
-    output = output.reshape((output.shape[0], output.shape[1] * FRAME_SIZE, DIM))
-
-    return (output, last_hidden)
 
 # the DNNs!! Taking the outputs from the RNN (frame_level_outputs)
 # prev_samples is a bunch of samples from previous timesteps (FRAME_SIZE timesteps).
@@ -486,8 +315,6 @@ print('----got to T var---')
 # After defined graph, need to define theano variables!
 sequences   = T.imatrix('sequences')
 noise       = T.imatrix('noise')
-h0          = T.tensor3('h0')
-big_h0      = T.tensor3('big_h0')
 reset       = T.iscalar('reset')
 mask        = T.matrix('mask')
 if FLAG_QUANTLAB:
@@ -504,8 +331,6 @@ if args.debug:
     # Maybe I should set the compute_test_value=warn from here.
     # theano.config.compute_test_value = 'warn'
     sequences.tag.test_value = numpy.zeros((BATCH_SIZE, SEQ_LEN+OVERLAP), dtype='int32')
-    h0.tag.test_value = numpy.zeros((BATCH_SIZE, N_RNN, H0_MULT*DIM), dtype='float32')
-    big_h0.tag.test_value = numpy.zeros((BATCH_SIZE, N_RNN, H0_MULT*BIG_DIM), dtype='float32')
     reset.tag.test_value = numpy.array(1, dtype='int32')
     mask.tag.test_value = numpy.ones((BATCH_SIZE, SEQ_LEN+OVERLAP), dtype='float32')
 
@@ -519,10 +344,6 @@ target_mask = mask[:, BIG_FRAME_SIZE:]
 #---debug---
 #pdb.set_trace()
 #---debug---
-# Defines relationship between the variables. This isn't computed yet!
-# big_frame_level_outputs, new_big_h0, big_frame_independent_preds = big_frame_level_rnn(big_input_sequences, sequences_lab_big, big_h0, reset)
-
-# frame_level_outputs, new_h0 = frame_level_rnn(input_sequences, sequences_lab, big_frame_level_outputs, h0, reset)
 frame_level_outputs = T.imatrix('frame_level_outputs')
 
 prev_samples = noise[:, BIG_FRAME_SIZE-FRAME_SIZE_DNN:-1]
@@ -591,47 +412,17 @@ updates = lasagne.updates.adam(grads, all_params)
 
 print('----got to fn---')
 # Training function(s)
-"""
-other_train_fn = theano.function(
-    [sequences, sequences_lab, sequences_lab_big, big_h0, h0, reset, mask],
-    [cost, new_big_h0, new_h0],
-    updates=other_updates,
-    on_unused_input='warn'
-)
-"""
 train_fn = theano.function(
-    [sequences, sequences_lab, sequences_lab_big, big_h0, h0, reset, mask, noise], # Add noise as input here.
-    [cost, new_big_h0, new_h0],
+    [sequences, sequences_lab, sequences_lab_big, reset, mask, noise], # Add noise as input here.
+    [cost],
     updates=updates,
     on_unused_input='warn'
 )
 
 # Validation and Test function, hence no updates
-"""
-other_test_fn = theano.function(
-    [sequences, sequences_lab, sequences_lab_big, big_h0, h0, reset, mask],
-    [cost, new_big_h0, new_h0],
-    on_unused_input='warn'
-)
-"""
 test_fn = theano.function(
-    [sequences, sequences_lab, sequences_lab_big, big_h0, h0, reset, mask, noise],
-    [cost, new_big_h0, new_h0],
-    on_unused_input='warn'
-)
-
-# Sampling at big frame level
-big_frame_level_generate_fn = theano.function(
-    [noise, sequences_lab_big, big_h0, reset],
-    big_frame_level_rnn(noise, sequences_lab_big, big_h0, reset)[0:2],
-    on_unused_input='warn'
-)
-
-# Sampling at frame level
-big_frame_level_outputs = T.matrix('big_frame_level_outputs')
-frame_level_generate_fn = theano.function(
-    [noise, sequences_lab, big_frame_level_outputs, h0, reset],
-    frame_level_rnn(noise, sequences_lab, big_frame_level_outputs.dimshuffle(0,'x',1), h0, reset),
+    [sequences, sequences_lab, sequences_lab_big, reset, mask, noise],
+    [cost],
     on_unused_input='warn'
 )
 
@@ -699,17 +490,6 @@ def generate_and_save_samples(tag):
 
     samples_lab_big = get_lab_big(samples_lab)
 
-    # First half zero, others fixed random at each checkpoint
-    big_h0 = numpy.zeros(
-        (N_SEQS, N_BIG_RNN, H0_MULT*BIG_DIM),
-        dtype='float32'
-    )
-
-    h0 = numpy.zeros(
-        (N_SEQS, N_RNN, H0_MULT*DIM),
-        dtype='float32'
-    )
-
     big_frame_level_outputs = None
     frame_level_outputs = None
 
@@ -762,14 +542,12 @@ def monitor(data_feeder):
         Total time spent
     """
     _total_time = time()
-    _h0 = numpy.zeros((BATCH_SIZE, N_RNN, H0_MULT*DIM), dtype='float32')
-    _big_h0 = numpy.zeros((BATCH_SIZE, N_RNN, H0_MULT*BIG_DIM), dtype='float32')
     _costs = []
     _data_feeder = load_data(data_feeder)
     for _seqs, _reset, _mask, _seqs_lab, _seqs_noise in _data_feeder:
         _seqs_lab_big = get_lab_big(_seqs_lab)
         _seqs_noise = _seqs_noise.astype(numpy.int32)
-        _cost, _big_h0, _h0 = test_fn(_seqs, _seqs_lab, _seqs_lab_big, _big_h0, _h0, _reset, _mask, _seqs_noise)
+        _cost = test_fn(_seqs, _seqs_lab, _seqs_lab_big, _reset, _mask, _seqs_noise)
         _costs.append(_cost)
 
     return numpy.mean(_costs), time() - _total_time
@@ -789,9 +567,6 @@ end_of_batch = False
 epoch = 0
 
 cost_log_list = []
-
-h0 = numpy.zeros((BATCH_SIZE, N_RNN, H0_MULT*DIM), dtype='float32')
-big_h0 = numpy.zeros((BATCH_SIZE, N_RNN, H0_MULT*BIG_DIM), dtype='float32')
 
 # Initial load train dataset
 tr_feeder = load_data(train_feeder)
@@ -879,9 +654,8 @@ while True:
     start_time = time()
     # pdb.set_trace()
     seqs_noise = seqs_noise.astype(numpy.int32)
-    cost, big_h0, h0 = train_fn(seqs, seqs_lab, seqs_lab_big, big_h0, h0, reset, mask, seqs_noise)
+    cost = train_fn(seqs, seqs_lab, seqs_lab_big, reset, mask, seqs_noise)
     total_time += time() - start_time
-    #print "This cost:", cost, "This h0.mean()", h0.mean()
 
     costs.append(cost)
 
