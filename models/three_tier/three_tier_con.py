@@ -714,7 +714,6 @@ def generate_and_save_samples(tag):
     if FLAG_GEN: LENGTH = 785*80
 
     samples = numpy.zeros((N_SEQS, LENGTH), dtype='int32')
-    samples_noise = numpy.zeros((N_SEQS, LENGTH), dtype='int32')
 
     if FLAG_USETRAIN_WHENTEST:
         print('')
@@ -726,6 +725,8 @@ def generate_and_save_samples(tag):
     mini_batch = testData_feeder.next()
     tmp, _, _, seqs_lab, seqs_noise = mini_batch
     samples_lab = seqs_lab[:N_SEQS]
+    seqs_noise = seqs_noise.astype('int32')
+    samples_noise = seqs_noise[:N_SEQS, :LENGTH]
     
     if flag_dict['RMZERO']:
         samples[:, :BIG_FRAME_SIZE] = tmp[:N_SEQS, :BIG_FRAME_SIZE]
