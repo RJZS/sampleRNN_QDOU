@@ -101,13 +101,13 @@ N_FRAMES = SEQ_LEN / FRAME_SIZE # Number of frames in each truncated BPTT pass
 if Q_TYPE == 'mu-law' and Q_LEVELS != 256:
     raise ValueError('For mu-law Quantization levels should be exactly 256!')
 
-    
+
 LEARNING_RATE = float(args.lr)
 UCINIT_DIRFILE = args.uc
 
 GEN_DIRFILE = args.gen
 FLAG_GEN = (GEN_DIRFILE!='not_gen')
-    
+
 ###set FLAGS for options
 flag_dict = get_flag_dict(args)
 
@@ -131,9 +131,9 @@ STOP_ITERS = 200000 # Stop after this many iterations
 PRINT_TIME = 60*60*24*3 # Print cost, generate samples, save model checkpoint every N seconds.
 STOP_TIME = 60*60*24*3.5 # Stop after this many seconds of actual training (not including time req'd to generate samples etc.)
 N_SEQS = 5  # Number of samples to generate every time monitoring.
-RESULTS_DIR = '/home/dawna/tts/rjzs2/noise_results_3t'
+RESULTS_DIR = '/home/dawna/tts/rjzs2/noise_results_dnn'
 if WHICH_SET != 'SPEECH': RESULTS_DIR = os.path.join(RESULTS_DIR, WHICH_SET)
-    
+
 if FLAG_GEN:
     # N_SEQS = 10
     # N_SECS = 8 #LENGTH = 8*BITRATE #640*80
@@ -212,7 +212,7 @@ elif WHICH_SET == 'SPEECH' or 'LESLEY' or 'NANCY':
     from datasets.dataset_con import speech_valid_feed_epoch as valid_feeder
     from datasets.dataset_con import speech_test_feed_epoch  as test_feeder
 
-    
+
 def get_lab_big(seqs_lab):
     seqs_lab_big = seqs_lab[:,::BIG_FRAME_SIZE/FRAME_SIZE,:]
     return seqs_lab_big
@@ -266,21 +266,10 @@ def big_frame_level_rnn(input_sequences, input_sequences_lab_big, h0, reset):
         input_sequences_lab_big *= lib.floatX(2) # 0< data <2
         input_sequences_lab_big -= lib.floatX(1) # -1< data <1
         input_sequences_lab_big *= lib.floatX(2) # -2< data <2
-        
+
         frames = (frames.astype('float32') / lib.floatX(Q_LEVELS/2)) - lib.floatX(1)
         frames *= lib.floatX(2)
         frames = T.concatenate([frames, input_sequences_lab_big], axis=2)
-
-    # Initial state of RNNs
-    learned_h0 = lib.param(
-        'BigFrameLevel.h0',
-        numpy.zeros((N_BIG_RNN, H0_MULT*BIG_DIM), dtype=theano.config.floatX)
-    )
-    # Handling LEARN_H0
-    learned_h0.param = LEARN_H0
-    learned_h0 = T.alloc(learned_h0, h0.shape[0], N_BIG_RNN, H0_MULT*BIG_DIM)
-    learned_h0 = T.unbroadcast(learned_h0, 0, 1, 2)
-    h0 = theano.ifelse.ifelse(reset, learned_h0, h0)
 
     # Handling RNN_TYPE
     # Handling SKIP_CONN
@@ -432,6 +421,8 @@ def sample_level_predictor(frame_level_outputs, prev_samples):
     prev_samples.shape:        (batch size, FRAME_SIZE) -> (BATCH_SIZE * SEQ_LEN, FRAME_SIZE_DNN)
     output.shape:              (batch size, Q_LEVELS)
     """
+
+
     # Handling EMB_SIZE
     if EMB_SIZE == 0:  # no support for one-hot in three_tier and one_tier.
         prev_samples = lib.ops.T_one_hot(prev_samples, Q_LEVELS)
@@ -507,7 +498,7 @@ else:
     print('REMINDER: lab is NOT quantized')
     sequences_lab      = T.tensor3('sequences_lab')
     sequences_lab_big      = T.tensor3('sequences_lab_big')
-    
+
 if args.debug:
     # Solely for debugging purposes.
     # Maybe I should set the compute_test_value=warn from here.
@@ -529,9 +520,10 @@ target_mask = mask[:, BIG_FRAME_SIZE:]
 #pdb.set_trace()
 #---debug---
 # Defines relationship between the variables. This isn't computed yet!
-big_frame_level_outputs, new_big_h0, big_frame_independent_preds = big_frame_level_rnn(big_input_sequences, sequences_lab_big, big_h0, reset)
+# big_frame_level_outputs, new_big_h0, big_frame_independent_preds = big_frame_level_rnn(big_input_sequences, sequences_lab_big, big_h0, reset)
 
-frame_level_outputs, new_h0 = frame_level_rnn(input_sequences, sequences_lab, big_frame_level_outputs, h0, reset)
+# frame_level_outputs, new_h0 = frame_level_rnn(input_sequences, sequences_lab, big_frame_level_outputs, h0, reset)
+frame_level_outputs = T.imatrix('frame_level_outputs')
 
 prev_samples = noise[:, BIG_FRAME_SIZE-FRAME_SIZE_DNN:-1]
 prev_samples = prev_samples.reshape((1, BATCH_SIZE, 1, -1))
@@ -726,8 +718,6 @@ def generate_and_save_samples(tag):
     mini_batch = testData_feeder.next()
     tmp, _, _, seqs_lab, seqs_noise = mini_batch
     samples_lab = seqs_lab[:N_SEQS]
-    seqs_noise = seqs_noise.astype('int32')
-    samples_noise = seqs_noise[:N_SEQS, :LENGTH]
 
     if flag_dict['RMZERO']:
         samples[:, :BIG_FRAME_SIZE] = tmp[:N_SEQS, :BIG_FRAME_SIZE]
@@ -757,31 +747,11 @@ def generate_and_save_samples(tag):
     # Do this for training and debugging.
     # As the RNN needs initial state.
     # Once model is good enough, actually use 20 frames.
+    seqs_noise = seqs_noise.astype('int32')
     for t in xrange(BIG_FRAME_SIZE, LENGTH): # for loop going sample by sample
-
-        if t % BIG_FRAME_SIZE == 0:
-            tmp = samples_lab_big[:,(t-BIG_FRAME_SIZE)//BIG_FRAME_SIZE,:]
-            tmp = tmp.reshape(tmp.shape[0],1,tmp.shape[1])
-
-            big_frame_level_outputs, big_h0 = big_frame_level_generate_fn(
-                samples_noise[:, t-BIG_FRAME_SIZE:t],
-                tmp,
-                big_h0,
-                numpy.int32(t == BIG_FRAME_SIZE)
-            )
-
         if t % FRAME_SIZE == 0:
-            tmp = samples_lab[:,(t-BIG_FRAME_SIZE)//FRAME_SIZE,:]
-            # tmp = samples_lab[:,(t-FRAME_SIZE)//FRAME_SIZE,:] #classic, but might introduce a slight mis-alignment
-            tmp = tmp.reshape(tmp.shape[0],1,tmp.shape[1])
-
-            frame_level_outputs, h0 = frame_level_generate_fn(
-                samples_noise[:, t-FRAME_SIZE:t],
-                tmp,
-                big_frame_level_outputs[:, (t / FRAME_SIZE) % (BIG_FRAME_SIZE / FRAME_SIZE)],
-                h0,
-                numpy.int32(t == BIG_FRAME_SIZE)
-            )
+            frame_level_outputs = numpy.zeros(N_SEQS, DIM)
+            frame_level_outputs[:, :FRAME_SIZE] = seqs_noise[:, t-FRAME_SIZE:t]
 
         samples[:, t] = sample_level_generate_fn(
             frame_level_outputs[:, t % FRAME_SIZE],
@@ -901,7 +871,7 @@ if RESUME:
 
     lib.load_params(res_path)
     print "Parameters from last available checkpoint loaded."
-    
+
     lib.load_updates(res_path,updates)
     cost_log_list = lib.load_costs(PARAMS_PATH)
     print "Updates from last available checkpoint loaded."
@@ -954,7 +924,7 @@ while True:
         print "\nValidation!",
         valid_cost, valid_time = monitor(valid_feeder)
         print "Done!"
-        
+
         # 1. Test
         test_time = 0.
         # Only when the validation cost is improved get the cost for test set.
