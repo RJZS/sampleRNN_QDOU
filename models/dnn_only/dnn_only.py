@@ -718,6 +718,8 @@ def generate_and_save_samples(tag):
     mini_batch = testData_feeder.next()
     tmp, _, _, seqs_lab, seqs_noise = mini_batch
     samples_lab = seqs_lab[:N_SEQS]
+    seqs_noise = seqs_noise.astype('int32')
+    samples_noise = seqs_noise[:N_SEQS, :LENGTH]
 
     if flag_dict['RMZERO']:
         samples[:, :BIG_FRAME_SIZE] = tmp[:N_SEQS, :BIG_FRAME_SIZE]
@@ -747,11 +749,10 @@ def generate_and_save_samples(tag):
     # Do this for training and debugging.
     # As the RNN needs initial state.
     # Once model is good enough, actually use 20 frames.
-    seqs_noise = seqs_noise.astype('int32')
     for t in xrange(BIG_FRAME_SIZE, LENGTH): # for loop going sample by sample
         if t % FRAME_SIZE == 0:
             frame_level_outputs = numpy.zeros(N_SEQS, DIM)
-            frame_level_outputs[:, :FRAME_SIZE] = seqs_noise[:, t-FRAME_SIZE:t]
+            frame_level_outputs[:, :FRAME_SIZE] = samples_noise[:, t-FRAME_SIZE:t]
 
         samples[:, t] = sample_level_generate_fn(
             frame_level_outputs[:, t % FRAME_SIZE],
