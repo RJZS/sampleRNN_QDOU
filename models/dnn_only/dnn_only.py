@@ -346,7 +346,7 @@ target_mask = mask[:, BIG_FRAME_SIZE:]
 
 
 frame_level_outputs = np.zeros((BATCH_SIZE, SEQ_LEN, DIM))
-frame_level_outputs[:, , :FRAME_SIZE] = noise[:, BIG_FRAME_SIZE-FRAME_SIZE:-FRAME_SIZE]
+frame_level_outputs[:, :, 0] = noise[:, BIG_FRAME_SIZE-FRAME_SIZE:BIG_FRAME_SIZE]
 prev_samples = noise[:, BIG_FRAME_SIZE-FRAME_SIZE_DNN:-1]
 prev_samples = prev_samples.reshape((1, BATCH_SIZE, 1, -1))
 prev_samples = T.nnet.neighbours.images2neibs(prev_samples, (1, FRAME_SIZE_DNN), neib_step=(1, 1), mode='valid')
