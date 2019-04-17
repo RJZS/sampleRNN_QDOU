@@ -725,12 +725,15 @@ def generate_and_save_samples(tag):
     mini_batch = testData_feeder.next()
     tmp, _, _, seqs_lab, seqs_noise = mini_batch
     samples_lab = seqs_lab[:N_SEQS]
-    seqs_noise = seqs_noise.astype('int32')
-    samples_noise = seqs_noise[:N_SEQS, :LENGTH]
+    seqs_noise = seqs_noise[:N_SEQS]
+    # Quantisation Steps (do this on the dataset not per minibatch)
+    #seqs_noise = (seqs_noise /  np.amax(np.abs(seqs_noise), 1)[:,None]) + 1
+    #seqs_noise = np.divide(np.multiply(seqs_noise, Q_LEVELS-1), 2)
+    #seqs_noise = np.round(seqs_noise)
+    seqs_noise = seqs_noise.astype(np.int32)
     
     if flag_dict['RMZERO']:
         samples[:, :BIG_FRAME_SIZE] = tmp[:N_SEQS, :BIG_FRAME_SIZE]
-        samples_noise[:, :BIG_FRAME_SIZE] = seqs_noise[:N_SEQS, :BIG_FRAME_SIZE]
     else:
         samples[:, :BIG_FRAME_SIZE] = Q_ZERO
         samples_noise[:, :BIG_FRAME_SIZE] = Q_ZERO
@@ -763,7 +766,7 @@ def generate_and_save_samples(tag):
             tmp = tmp.reshape(tmp.shape[0],1,tmp.shape[1])
             
             big_frame_level_outputs, big_h0 = big_frame_level_generate_fn(
-                samples_noise[:, t-BIG_FRAME_SIZE:t],
+                seqs_noise[:, t-BIG_FRAME_SIZE:t],
                 tmp,
                 big_h0,
                 numpy.int32(t == BIG_FRAME_SIZE)
@@ -775,7 +778,7 @@ def generate_and_save_samples(tag):
             tmp = tmp.reshape(tmp.shape[0],1,tmp.shape[1])
             
             frame_level_outputs, h0 = frame_level_generate_fn(
-                samples_noise[:, t-FRAME_SIZE:t],
+                seqs_noise[:, t-FRAME_SIZE:t],
                 tmp,
                 big_frame_level_outputs[:, (t / FRAME_SIZE) % (BIG_FRAME_SIZE / FRAME_SIZE)],
                 h0,
@@ -784,7 +787,7 @@ def generate_and_save_samples(tag):
 
         samples[:, t] = sample_level_generate_fn(
             frame_level_outputs[:, t % FRAME_SIZE],
-            samples_noise[:, t-FRAME_SIZE_DNN:t]
+            seqs_noise[:, t-FRAME_SIZE_DNN:t]
         )
 
     total_time = time() - total_time
