@@ -315,7 +315,7 @@ sequences   = T.imatrix('sequences')
 noise       = T.imatrix('noise')
 reset       = T.iscalar('reset')
 mask        = T.matrix('mask')
-frame_level_outputs = T.imatrix('frame_level_outputs')
+frame_level_outputs = T.matrix('frame_level_outputs')
 if FLAG_QUANTLAB:
     print('REMINDER: lab is quantized')
     sequences_lab      = T.itensor3('sequences_lab')
@@ -344,9 +344,7 @@ target_mask = mask[:, BIG_FRAME_SIZE:]
 #pdb.set_trace()
 #---debug---
 
-
-frame_level_outputs = np.zeros((BATCH_SIZE, SEQ_LEN, DIM))
-frame_level_outputs[:, :, 0] = noise[:, BIG_FRAME_SIZE-FRAME_SIZE:BIG_FRAME_SIZE]
+frame_level_outputs = noise[:, BIG_FRAME_SIZE-FRAME_SIZE:-FRAME_SIZE]
 prev_samples = noise[:, BIG_FRAME_SIZE-FRAME_SIZE_DNN:-1]
 prev_samples = prev_samples.reshape((1, BATCH_SIZE, 1, -1))
 prev_samples = T.nnet.neighbours.images2neibs(prev_samples, (1, FRAME_SIZE_DNN), neib_step=(1, 1), mode='valid')
