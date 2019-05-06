@@ -12,6 +12,7 @@ output_folder = 'speech/ln_MA_f32_CE_8s_norm_utt'
 ids_file = 'file_id_list.scp'
 
 r = 128000
+mu = 255
 
 train = []
 valid = []
@@ -43,11 +44,10 @@ for i, t in enumerate(train):
 
 print(idx)
 tA = np.reshape(tA, (900,128000))
-tA = (tA/np.amax(np.abs(tA)))+1  # [0,2]
-tA = (tA * 255)/2
-tA = np.round(tA)
-tA = tA.astype(np.int32)
-np.save('speech_train.npy', tA)
+tA = (tA/np.amax(np.abs(tA)))
+x_mu = np.sign(tA) * np.log(1 + mu * np.abs(tA)) / np.log(1 + mu)
+x_mu = ((x_mu + 1) / 2 * mu).astype('int16')
+np.save('speech_train.npy', x_mu)
 
 #for the_folder in dataset_folders:
 #    # Generate a list of the datasets in that folder, ie ['speech_test', 'speech_valid', etc...]
