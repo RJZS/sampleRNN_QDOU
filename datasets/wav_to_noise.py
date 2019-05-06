@@ -49,8 +49,11 @@ def create_noise_file(file_list, num_rows, output_name):
     x_mu = ((x_mu + 1) / 2 * mu).astype('int16')
     np.save('{}/{}.npy'.format(output_folder, output_name), x_mu)
 
+print("Train")
 create_noise_file(train, 900, 'speech_train_noise')
+print("Test")
 create_noise_file(test, 27, 'speech_test_noise')
+print("Valid")
 create_noise_file(valid, 26, 'speech_valid_noise')
 
 #for the_folder in dataset_folders:
