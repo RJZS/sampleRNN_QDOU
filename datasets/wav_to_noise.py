@@ -43,7 +43,7 @@ def create_noise_file(file_list, num_rows, output_name):
         idx += len(row)
 
     print(idx)
-    oA = np.reshape(oA, (900, 128000))
+    oA = np.reshape(oA, (num_rows, 128000))
     oA = (oA/np.amax(np.abs(oA)))
     x_mu = np.sign(oA) * np.log(1 + mu * np.abs(oA)) / np.log(1 + mu)
     x_mu = ((x_mu + 1) / 2 * mu).astype('int16')
