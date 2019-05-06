@@ -23,9 +23,10 @@ class Configuration:
         self.lab_dir = os.path.join(self.data_dir, 'speechGenCmpData')
         # self.lab_dir = '/home/dawna/tts/gad27/exp/char2wav/upcls_Nick_3xBLSTM1024_16kHz_LSE/out/model-gen/' #alternative
         self.file_id_list = os.path.join(self.data_dir, 'file_id_list.scp')
-        
-        self.output_dir_wav = os.path.join(self.data_dir, 'speechNpyData/wav')
-        self.output_dir_lab = os.path.join(self.data_dir, 'speechNpyData/lab')
+
+        self.output_dir = '/home/miproj/4thyr.oct2018/rjzs2/sampleRNN_QDOU/datasets/speech/vocoder'
+        self.output_dir_wav = os.path.join(self.output_dir, 'speechNpyData/wav')
+        self.output_dir_lab = os.path.join(self.output_dir, 'speechNpyData/lab')
         self.output_dir_wav_utt = os.path.join(self.output_dir_wav, 'utt_float32')
         self.output_dir_lab_utt = os.path.join(self.output_dir_lab, 'utt_traj') #utt_lab
         
