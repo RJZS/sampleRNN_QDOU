@@ -32,22 +32,26 @@ with open(ids_file) as f:
 		l = f.readline()
 		i += 1
 
-# Now read the files.
-tA = np.zeros(900*128000)  # trainArray
-print(128000*27)
-idx = 0
-for i, t in enumerate(train):
-	row = numpy_from_file(data_folder,t)
-	tA[idx:idx+len(row)] = row
-	idx += len(row)
-	print i
 
-print(idx)
-tA = np.reshape(tA, (900,128000))
-tA = (tA/np.amax(np.abs(tA)))
-x_mu = np.sign(tA) * np.log(1 + mu * np.abs(tA)) / np.log(1 + mu)
-x_mu = ((x_mu + 1) / 2 * mu).astype('int16')
-np.save('speech_train.npy', x_mu)
+def create_noise_file(file_list, num_rows, output_name):
+    # Now read the files.
+    oA = np.zeros(num_rows*128000)  # outputArray
+    idx = 0
+    for i, t in enumerate(file_list):
+        row = numpy_from_file(data_folder,t)
+        oA[idx:idx+len(row)] = row
+        idx += len(row)
+
+    print(idx)
+    oA = np.reshape(oA, (900, 128000))
+    oA = (oA/np.amax(np.abs(oA)))
+    x_mu = np.sign(oA) * np.log(1 + mu * np.abs(oA)) / np.log(1 + mu)
+    x_mu = ((x_mu + 1) / 2 * mu).astype('int16')
+    np.save('{}/{}.npy'.format(output_folder, output_name), x_mu)
+
+create_noise_file(train, 900, 'speech_train_noise')
+create_noise_file(test, 27, 'speech_test_noise')
+create_noise_file(valid, 26, 'speech_valid_noise')
 
 #for the_folder in dataset_folders:
 #    # Generate a list of the datasets in that folder, ie ['speech_test', 'speech_valid', etc...]
